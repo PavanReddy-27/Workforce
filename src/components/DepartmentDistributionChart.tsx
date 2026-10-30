@@ -164,6 +164,7 @@ export const DepartmentDistributionChart: React.FC<DepartmentDistributionChartPr
             value={metricKey}
             exclusive
             size="small"
+            aria-label="Department metric view mode"
             onChange={(_, val) => {
               if (val) setMetricKey(val);
             }}
@@ -187,13 +188,34 @@ export const DepartmentDistributionChart: React.FC<DepartmentDistributionChartPr
               },
             }}
           >
-            <ToggleButton value="headcount">Headcount & Roles</ToggleButton>
-            <ToggleButton value="satisfaction">Satisfaction</ToggleButton>
+            <ToggleButton value="headcount" aria-label="Headcount and open roles">Headcount & Roles</ToggleButton>
+            <ToggleButton value="satisfaction" aria-label="eNPS employee satisfaction">Satisfaction</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
         {/* Chart Canvas: expanded to 325px height to eliminate dead whitespace */}
         <Box sx={{ width: '100%', height: 325, minWidth: 0, minHeight: 0, my: 0.5 }}>
+          {!data || data.length === 0 ? (
+            <Box
+              sx={{
+                height: 325,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.secondary',
+                gap: 1,
+              }}
+            >
+              <BarChartOutlinedIcon sx={{ fontSize: 40, opacity: 0.3 }} />
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                No department distribution data available.
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                Adjust or reset active filters to view department breakdowns.
+              </Typography>
+            </Box>
+          ) : (
           <ResponsiveContainer width="100%" height={325} minWidth={0} minHeight={0}>
             <BarChart
               data={data}
@@ -293,6 +315,7 @@ export const DepartmentDistributionChart: React.FC<DepartmentDistributionChartPr
               )}
             </BarChart>
           </ResponsiveContainer>
+          )}
         </Box>
 
         <Divider sx={{ my: 1.5 }} />

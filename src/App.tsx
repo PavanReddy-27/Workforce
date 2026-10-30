@@ -32,6 +32,7 @@ import { LoadingSkeleton } from './components/LoadingSkeleton';
 import { EmptyState } from './components/EmptyState';
 import { ErrorState } from './components/ErrorState';
 import { EmployeeTable } from './features/employees';
+import { employeeService } from './services/employees.service';
 import type { FilterState } from './types';
 import { useDashboardData } from './hooks';
 
@@ -126,13 +127,40 @@ export const App: React.FC = () => {
     setViewState('normal');
   };
 
-  const handleNewHireSubmit = (e: React.FormEvent) => {
+  const handleNewHireSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newHireForm.name.trim() || !newHireForm.role.trim()) {
+    const fullName = newHireForm.name.trim();
+    const role = newHireForm.role.trim();
+    if (!fullName || !role) {
       return;
     }
+
+    const nameParts = fullName.split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || 'Employee';
+
     setNewHireDialogOpen(false);
-    setSnackbarMessage(`Successfully initiated onboarding dossier for ${newHireForm.name}.`);
+
+    try {
+      const res = await employeeService.createEmployee({
+        first_name: firstName,
+        last_name: lastName,
+        job_title: role,
+        department: newHireForm.department,
+        location: newHireForm.location,
+        employment_status: 'Active',
+      });
+
+      if (res.success) {
+        setSnackbarMessage(`Successfully onboarded ${fullName} into ${newHireForm.department}.`);
+        refetch();
+      } else {
+        setSnackbarMessage(`Failed to create employee dossier: ${res.message || 'Unknown error'}`);
+      }
+    } catch (err) {
+      setSnackbarMessage(`Error creating employee: ${(err as Error).message}`);
+    }
+
     setNewHireForm({
       name: '',
       role: '',

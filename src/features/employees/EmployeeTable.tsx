@@ -300,6 +300,7 @@ export const EmployeeTable: React.FC = () => {
               <IconButton
                 size="small"
                 onClick={() => setRefreshTrigger((prev) => prev + 1)}
+                aria-label="Refresh employee records"
                 sx={{
                   border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : '#E2E8F0'}`,
                   height: 36,
@@ -338,6 +339,9 @@ export const EmployeeTable: React.FC = () => {
               },
             }}
             slotProps={{
+              htmlInput: {
+                'aria-label': 'Search employees by name, code, or email',
+              },
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
@@ -346,7 +350,7 @@ export const EmployeeTable: React.FC = () => {
                 ),
                 endAdornment: searchInput ? (
                   <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchInput('')}>
+                    <IconButton size="small" onClick={() => setSearchInput('')} aria-label="Clear employee search">
                       <ClearIcon sx={{ fontSize: 15 }} />
                     </IconButton>
                   </InputAdornment>

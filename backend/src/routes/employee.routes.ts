@@ -4,6 +4,7 @@ import { validateRequest } from '../middleware/validateRequest';
 import {
   getEmployeesQuerySchema,
   getEmployeeByIdParamsSchema,
+  createEmployeeBodySchema,
 } from '../schemas/employee.schema';
 
 const router = Router();
@@ -13,6 +14,12 @@ router.get(
   '/',
   validateRequest({ query: getEmployeesQuerySchema }),
   controller.getEmployees
+);
+
+router.post(
+  '/',
+  validateRequest({ body: createEmployeeBodySchema }),
+  controller.createEmployee
 );
 
 router.get(

@@ -17,6 +17,11 @@ import type {
   EmployeeFilterParams,
 } from '../types';
 
+export type CreateEmployeeInput = Partial<BackendEmployee> & {
+  department?: string;
+  role?: string;
+};
+
 export interface IEmployeeService {
   getEmployees(
     params?: EmployeeFilterParams,
@@ -27,7 +32,7 @@ export interface IEmployeeService {
     options?: RequestOptions
   ): Promise<ApiResponse<BackendEmployee>>;
   createEmployee(
-    employee: Partial<BackendEmployee>,
+    employee: CreateEmployeeInput,
     options?: RequestOptions
   ): Promise<ApiResponse<BackendEmployee>>;
   updateEmployee(
@@ -78,7 +83,7 @@ export class EmployeeApiService implements IEmployeeService {
   }
 
   async createEmployee(
-    employee: Partial<BackendEmployee>,
+    employee: CreateEmployeeInput,
     options?: RequestOptions
   ): Promise<ApiResponse<BackendEmployee>> {
     return httpClient.post<BackendEmployee>(API_ENDPOINTS.EMPLOYEES.BASE, employee, options);

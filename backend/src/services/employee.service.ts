@@ -35,4 +35,8 @@ export class EmployeeService {
     const employee = this.employeeRepo.findById(id);
     return employee || null;
   }
+
+  public createEmployee(data: Parameters<EmployeeRepository['create']>[0]): EmployeeWithDepartment {
+    return this.employeeRepo.create(data);
+  }
 }

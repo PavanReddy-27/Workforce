@@ -246,6 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={onToggleCollapse}
               size="small"
               sx={{ color: theme.palette.text.secondary, width: 24, height: 24 }}
+              aria-label="Expand sidebar"
             >
               <ChevronRightIcon sx={{ fontSize: 18 }} />
             </IconButton>
@@ -304,7 +305,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </Box>
           {(!collapsed || isMobile) && (
             <Tooltip title="Log out" arrow>
-              <IconButton size="small" sx={{ color: theme.palette.text.secondary }}>
+              <IconButton size="small" sx={{ color: theme.palette.text.secondary }} aria-label="Log out">
                 <LogoutOutlinedIcon sx={{ fontSize: 16 }} />
               </IconButton>
             </Tooltip>

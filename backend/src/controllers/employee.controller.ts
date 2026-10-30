@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { EmployeeService } from '../services/employee.service';
 import { sendSuccess, sendError } from '../utils/response';
-import type { GetEmployeesQuery } from '../schemas/employee.schema';
+import type { GetEmployeesQuery, CreateEmployeeBody } from '../schemas/employee.schema';
 
 export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService = new EmployeeService()) {}
@@ -25,5 +25,11 @@ export class EmployeeController {
     }
 
     sendSuccess(res, employee);
+  };
+
+  public createEmployee = (req: Request, res: Response): void => {
+    const body = req.body as unknown as CreateEmployeeBody;
+    const employee = this.employeeService.createEmployee(body);
+    sendSuccess(res, employee, 201);
   };
 }

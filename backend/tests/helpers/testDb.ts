@@ -23,6 +23,7 @@ import { errorHandler } from '../../src/middleware/errorHandler';
 import {
   getEmployeesQuerySchema,
   getEmployeeByIdParamsSchema,
+  createEmployeeBodySchema,
 } from '../../src/schemas/employee.schema';
 import { getAttendanceQuerySchema } from '../../src/schemas/attendance.schema';
 import {
@@ -88,6 +89,11 @@ export const createTestApp = (db: Database.Database): Express => {
     '/api/employees/:id',
     validateRequest({ params: getEmployeeByIdParamsSchema }),
     empCtrl.getEmployeeById
+  );
+  app.post(
+    '/api/employees',
+    validateRequest({ body: createEmployeeBodySchema }),
+    empCtrl.createEmployee
   );
 
   // Attendance

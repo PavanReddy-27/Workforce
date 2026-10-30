@@ -118,10 +118,11 @@ export const Topbar: React.FC<TopbarProps> = ({
             placeholder="Search employee or role..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            inputProps={{ 'aria-label': 'Search employee or role' }}
             sx={{ fontSize: '0.8125rem', width: '100%', color: theme.palette.text.primary }}
           />
           {searchQuery && (
-            <IconButton size="small" onClick={() => onSearchChange('')} sx={{ p: 0.25 }}>
+            <IconButton size="small" onClick={() => onSearchChange('')} sx={{ p: 0.25 }} aria-label="Clear search">
               <ClearIcon sx={{ fontSize: 13 }} />
             </IconButton>
           )}

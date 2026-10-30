@@ -108,49 +108,72 @@ export const WorkforceDonutChart: React.FC<WorkforceDonutChartProps> = ({
         </Box>
 
         {/* Donut Chart with Center Text */}
-        <Box sx={{ position: 'relative', width: '100%', height: 200, my: 0.5, minWidth: 0, minHeight: 0 }}>
-          <ResponsiveContainer width="100%" height={200} minWidth={0} minHeight={0}>
-            <PieChart>
-              <Tooltip content={<CustomPieTooltip isDark={isDark} />} />
-              <Pie
-                data={segments}
-                cx="50%"
-                cy="50%"
-                innerRadius={62}
-                outerRadius={88}
-                paddingAngle={3}
-                dataKey="value"
-                nameKey="name"
-                stroke={isDark ? '#1E293B' : '#FFFFFF'}
-                strokeWidth={2}
-                isAnimationActive={false}
-              >
-                {segments.map((entry) => (
-                  <Cell key={`cell-pie-${entry.name}`} fill={entry.color} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-
-          {/* Donut Center Content */}
+        {totalHeadcount === 0 ? (
           <Box
             sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              textAlign: 'center',
-              pointerEvents: 'none',
+              height: 200,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'text.secondary',
+              gap: 1,
+              my: 0.5,
             }}
           >
-            <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.25rem', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
-              {totalHeadcount.toLocaleString()}
+            <PieChartOutlineOutlinedIcon sx={{ fontSize: 36, opacity: 0.3 }} />
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              No employee records match current filters.
             </Typography>
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.625rem', fontWeight: 600, letterSpacing: '0.04em' }}>
-              TOTAL EMPLOYEES
+            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+              Reset filters to view workforce status breakdown.
             </Typography>
           </Box>
-        </Box>
+        ) : (
+          <Box sx={{ position: 'relative', width: '100%', height: 200, my: 0.5, minWidth: 0, minHeight: 0 }}>
+            <ResponsiveContainer width="100%" height={200} minWidth={0} minHeight={0}>
+              <PieChart>
+                <Tooltip content={<CustomPieTooltip isDark={isDark} />} />
+                <Pie
+                  data={segments}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={62}
+                  outerRadius={88}
+                  paddingAngle={3}
+                  dataKey="value"
+                  nameKey="name"
+                  stroke={isDark ? '#1E293B' : '#FFFFFF'}
+                  strokeWidth={2}
+                  isAnimationActive={false}
+                >
+                  {segments.map((entry) => (
+                    <Cell key={`cell-pie-${entry.name}`} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Donut Center Content */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                textAlign: 'center',
+                pointerEvents: 'none',
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.25rem', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
+                {totalHeadcount.toLocaleString()}
+              </Typography>
+              <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.625rem', fontWeight: 600, letterSpacing: '0.04em' }}>
+                TOTAL EMPLOYEES
+              </Typography>
+            </Box>
+          </Box>
+        )}
 
         <Divider sx={{ my: 1.5 }} />
 

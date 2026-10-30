@@ -101,6 +101,25 @@ describe('Repository Layer Unit Tests', () => {
       const byCode = empRepo.findByCode('EMP-002');
       expect(byCode?.employee_code).toBe('EMP-002');
     });
+
+    it('should create a new employee and generate employee code', () => {
+      const created = empRepo.create({
+        first_name: 'Seraphina',
+        last_name: 'Vance',
+        email: 'seraphina.vance@stackly.internal',
+        department_name: 'Engineering',
+        role: 'DevOps Specialist',
+        location: 'London Tech Hub',
+        employment_status: 'Active',
+      });
+
+      expect(created.id).toBeDefined();
+      expect(created.employee_code).toBeDefined();
+      expect(created.first_name).toBe('Seraphina');
+      expect(created.last_name).toBe('Vance');
+      expect(created.department_name).toBe('Engineering');
+      expect(created.location).toBe('London Tech Hub');
+    });
   });
 
   describe('AttendanceRepository', () => {

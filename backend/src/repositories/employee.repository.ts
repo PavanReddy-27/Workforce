@@ -182,4 +182,104 @@ export class EmployeeRepository {
     const stmt = this.db.prepare('SELECT COUNT(*) as c FROM employees');
     return (stmt.get() as { c: number }).c;
   }
+
+  public create(data: {
+    employee_code?: string;
+    first_name: string;
+    last_name: string;
+    email?: string;
+    department_id?: number;
+    department?: string;
+    department_name?: string;
+    location: string;
+    job_title?: string;
+    role?: string;
+    employment_status?: string;
+    hire_date?: string;
+  }): EmployeeWithDepartment {
+    let deptId = data.department_id;
+    const deptInput = data.department_name || data.department;
+
+    if (!deptId && deptInput) {
+      const deptNum = Number(deptInput);
+      if (!isNaN(deptNum)) {
+        deptId = deptNum;
+      } else {
+        const row = this.db
+          .prepare('SELECT id FROM departments WHERE LOWER(name) = LOWER(?)')
+          .get(deptInput) as { id: number } | undefined;
+        if (row) {
+          deptId = row.id;
+        } else {
+          const err = new Error(`Department '${deptInput}' does not exist`) as Error & {
+            statusCode: number;
+            code: string;
+          };
+          err.statusCode = 400;
+          err.code = 'VALIDATION_ERROR';
+          throw err;
+        }
+      }
+    }
+
+    if (!deptId) {
+      const firstDept = this.db.prepare('SELECT id FROM departments LIMIT 1').get() as { id: number } | undefined;
+      deptId = firstDept ? firstDept.id : 1;
+    }
+
+    const jobTitle = (data.job_title || data.role || 'Staff Member').trim();
+    let code = data.employee_code;
+    if (!code) {
+      let nextNum = this.count() + 1;
+      const maxRow = this.db
+        .prepare("SELECT employee_code FROM employees WHERE employee_code LIKE 'EMP-%' ORDER BY id DESC LIMIT 1")
+        .get() as { employee_code: string } | undefined;
+      if (maxRow?.employee_code) {
+        const match = maxRow.employee_code.match(/EMP-(\d+)/);
+        if (match) {
+          nextNum = Math.max(nextNum, parseInt(match[1], 10) + 1);
+        }
+      }
+      code = `EMP-${String(nextNum).padStart(3, '0')}`;
+      while (this.db.prepare('SELECT id FROM employees WHERE employee_code = ?').get(code)) {
+        nextNum += 1;
+        code = `EMP-${String(nextNum).padStart(3, '0')}`;
+      }
+    }
+
+    const cleanFirst = data.first_name.trim();
+    const cleanLast = data.last_name.trim();
+    let email = data.email?.trim();
+    if (!email) {
+      const basePrefix = `${cleanFirst.toLowerCase()}.${cleanLast.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+      let candidate = `${basePrefix}@stackly.internal`;
+      let counter = 1;
+      while (this.db.prepare('SELECT id FROM employees WHERE email = ?').get(candidate)) {
+        counter += 1;
+        candidate = `${basePrefix}${counter}@stackly.internal`;
+      }
+      email = candidate;
+    }
+
+    const status = data.employment_status || 'Active';
+    const hireDate = data.hire_date || new Date().toISOString().split('T')[0];
+
+    const insertSql = `
+      INSERT INTO employees (
+        employee_code, first_name, last_name, email, department_id,
+        location, job_title, employment_status, hire_date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const info = this.db
+      .prepare(insertSql)
+      .run(code, cleanFirst, cleanLast, email, deptId, data.location, jobTitle, status, hireDate);
+
+    const created = this.findById(Number(info.lastInsertRowid));
+    if (!created) {
+      throw new Error('Failed to retrieve newly created employee');
+    }
+    return created;
+  }
 }
+

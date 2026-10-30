@@ -199,6 +199,7 @@ export const AttendanceTrendChart: React.FC<AttendanceTrendChartProps> = ({ data
             value={viewType}
             exclusive
             size="small"
+            aria-label="Attendance trend view mode"
             onChange={(_, val) => {
               if (val) setViewType(val);
             }}
@@ -222,13 +223,34 @@ export const AttendanceTrendChart: React.FC<AttendanceTrendChartProps> = ({ data
               },
             }}
           >
-            <ToggleButton value="breakdown">Headcount</ToggleButton>
-            <ToggleButton value="rate">Rate %</ToggleButton>
+            <ToggleButton value="breakdown" aria-label="Headcount breakdown">Headcount</ToggleButton>
+            <ToggleButton value="rate" aria-label="Attendance rate percentage">Rate %</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
         {/* Chart Canvas */}
         <Box sx={{ width: '100%', height: 285, minWidth: 0, minHeight: 0, my: 0.5 }}>
+          {!data || data.length === 0 ? (
+            <Box
+              sx={{
+                height: 285,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.secondary',
+                gap: 1,
+              }}
+            >
+              <ShowChartIcon sx={{ fontSize: 40, opacity: 0.3 }} />
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                No attendance records match your filter criteria.
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                Try selecting a broader date range or clearing department filters.
+              </Typography>
+            </Box>
+          ) : (
           <ResponsiveContainer width="100%" height={285} minWidth={0} minHeight={0}>
             {viewType === 'breakdown' ? (
               <AreaChart
@@ -360,6 +382,7 @@ export const AttendanceTrendChart: React.FC<AttendanceTrendChartProps> = ({ data
               </AreaChart>
             )}
           </ResponsiveContainer>
+          )}
         </Box>
 
         <Divider sx={{ my: 1.5 }} />

@@ -125,4 +125,75 @@ describe('Employees API Integration Tests', () => {
     expect(res.body.success).toBe(false);
     expect(res.body.error.code).toBe('EMPLOYEE_NOT_FOUND');
   });
+
+  describe('POST /api/employees', () => {
+    it('creates a new employee successfully with HTTP 201', async () => {
+      const newEmp = {
+        first_name: 'Marcus',
+        last_name: 'Vance',
+        email: 'marcus.vance@stackly.internal',
+        department_name: 'Engineering',
+        role: 'Site Reliability Engineer',
+        location: 'San Francisco HQ',
+        employment_status: 'Active',
+      };
+
+      const res = await request(app).post('/api/employees').send(newEmp);
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.first_name).toBe('Marcus');
+      expect(res.body.data.last_name).toBe('Vance');
+      expect(res.body.data.employee_code).toBeDefined();
+      expect(res.body.data.department_name).toBe('Engineering');
+    });
+
+    it('rejects employee creation when required fields are missing', async () => {
+      const invalidEmp = {
+        first_name: 'Missing',
+        // last_name missing
+        email: 'missing@stackly.internal',
+      };
+
+      const res = await request(app).post('/api/employees').send(invalidEmp);
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('rejects employee creation with invalid email format', async () => {
+      const invalidEmp = {
+        first_name: 'Invalid',
+        last_name: 'Email',
+        email: 'not-an-email',
+        department_name: 'Engineering',
+        role: 'Dev',
+        location: 'San Francisco HQ',
+      };
+
+      const res = await request(app).post('/api/employees').send(invalidEmp);
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('rejects employee creation when department does not exist', async () => {
+      const invalidEmp = {
+        first_name: 'No',
+        last_name: 'Dept',
+        email: 'no.dept@stackly.internal',
+        department_name: 'NonExistentDept999',
+        role: 'Consultant',
+        location: 'San Francisco HQ',
+      };
+
+      const res = await request(app).post('/api/employees').send(invalidEmp);
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+  });
 });
