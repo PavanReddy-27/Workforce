@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "npm --prefix backend run dev",
+    "server:build": "npm --prefix backend run build",
+    "server:start": "npm --prefix backend start",
+    "server:test": "npm --prefix backend test",
+    "server:seed": "npm --prefix backend run db:seed"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
