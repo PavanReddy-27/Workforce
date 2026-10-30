@@ -48,7 +48,9 @@ Enterprise workforce analytics dashboard developed for the Stackly Workforce Ana
 ## Architecture & Project Structure
 
 ```
-vite-project/
+Workforce/
+├── docs/
+│   └── SPRINT-1-AUDIT.md        # Sprint 1 technical audit & architecture documentation
 ├── index.html                   # HTML entry point with Inter font & meta tags
 ├── package.json                 # Dependencies and build scripts
 ├── tsconfig.json                # TypeScript project configuration
@@ -88,7 +90,7 @@ vite-project/
 
 1. Navigate to the project directory:
    ```bash
-   cd vite-project
+   cd Workforce
    ```
 
 2. Install dependencies:

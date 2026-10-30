@@ -1,0 +1,64 @@
+/**
+ * Dashboard & Visualization Types
+ * Strictly typed interfaces for KPI metrics, chart series, and filtering.
+ */
+
+import type { ActivityItem } from './models';
+
+export type TimeRange = '7d' | '30d' | '90d' | '1y';
+
+export interface FilterState {
+  department: string;
+  location: string;
+  timeRange: TimeRange;
+  employmentType: string;
+  searchQuery: string;
+}
+
+export interface KpiMetric {
+  id: 'total_employees' | 'present_today' | 'absent_today' | 'attendance_rate' | 'on_leave';
+  title: string;
+  value: string;
+  numericValue: number;
+  change: number; // percentage change
+  isPositive: boolean; // true = positive business connotation
+  period: string;
+  subtitle: string;
+  iconName: 'people' | 'check' | 'cancel' | 'trending_up' | 'event_busy';
+  badgeColor: string;
+}
+
+export interface AttendanceDataPoint {
+  date: string;
+  inOffice: number;
+  remote: number;
+  onLeave: number;
+  totalPresent: number;
+  attendanceRate: number; // percentage (0–100)
+}
+
+export interface DepartmentMetric {
+  name: string;
+  headcount: number;
+  openRoles: number;
+  satisfaction: number; // 0 - 100
+  budget: number; // % utilized
+  diversity: number; // % female/non-binary
+  color: string;
+}
+
+export interface DistributionSegment {
+  name: string;
+  value: number;
+  color: string;
+  percentage: number;
+}
+
+export interface DashboardSummary {
+  totalHeadcount: number;
+  kpis: KpiMetric[];
+  trendPoints: AttendanceDataPoint[];
+  departmentChartData: DepartmentMetric[];
+  workforceDonutSegments: DistributionSegment[];
+  filteredActivities: ActivityItem[];
+}

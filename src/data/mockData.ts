@@ -1,62 +1,20 @@
-export interface FilterState {
-  department: string;
-  location: string;
-  timeRange: '7d' | '30d' | '90d' | '1y';
-  employmentType: string;
-  searchQuery: string;
-}
+import type {
+  FilterState,
+  KpiMetric,
+  AttendanceDataPoint,
+  DepartmentMetric,
+  DistributionSegment,
+  ActivityItem,
+} from '../types';
 
-export interface KpiMetric {
-  id: 'total_employees' | 'present_today' | 'absent_today' | 'attendance_rate' | 'on_leave';
-  title: string;
-  value: string;
-  numericValue: number;
-  change: number; // percentage change
-  isPositive: boolean; // positive connotation
-  period: string;
-  subtitle: string;
-  iconName: 'people' | 'check' | 'cancel' | 'trending_up' | 'event_busy';
-  badgeColor: string;
-}
-
-export interface AttendanceDataPoint {
-  date: string;
-  inOffice: number;
-  remote: number;
-  onLeave: number;
-  totalPresent: number;
-  attendanceRate: number; // %
-}
-
-export interface DepartmentMetric {
-  name: string;
-  headcount: number;
-  openRoles: number;
-  satisfaction: number; // 0 - 100
-  budget: number; // % utilized
-  diversity: number; // % female/non-binary
-  color: string;
-}
-
-export interface DistributionSegment {
-  name: string;
-  value: number;
-  color: string;
-  percentage: number;
-}
-
-export interface ActivityItem {
-  id: string;
-  type: 'hire' | 'promotion' | 'leave' | 'transfer' | 'anniversary';
-  employeeName: string;
-  role: string;
-  department: string;
-  location: string;
-  employmentType: string;
-  description: string;
-  timeAgo: string;
-  status: 'completed' | 'pending' | 'approved';
-}
+export type {
+  FilterState,
+  KpiMetric,
+  AttendanceDataPoint,
+  DepartmentMetric,
+  DistributionSegment,
+  ActivityItem,
+};
 
 export const DEPARTMENTS = [
   'All Departments',

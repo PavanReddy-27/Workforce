@@ -35,9 +35,9 @@ import {
   DEPARTMENTS,
   LOCATIONS,
   EMPLOYMENT_TYPES,
-  getFilteredWorkforceData,
-  type FilterState,
 } from './data/mockData';
+import type { FilterState } from './types';
+import { useDashboardData } from './hooks';
 
 export const App: React.FC = () => {
   // Theme state: default to crisp light mode (Stackly visual reference)
@@ -80,9 +80,7 @@ export const App: React.FC = () => {
     departmentChartData,
     workforceDonutSegments,
     filteredActivities,
-  } = useMemo(() => {
-    return getFilteredWorkforceData(filters);
-  }, [filters]);
+  } = useDashboardData(filters);
 
   const handleToggleMode = () => {
     setMode((prev) => (prev === 'light' ? 'dark' : 'light'));
