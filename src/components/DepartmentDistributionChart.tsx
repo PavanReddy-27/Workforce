@@ -23,7 +23,7 @@ import {
   Cell,
 } from 'recharts';
 import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
-import type { DepartmentMetric } from '../data/mockData';
+import type { DepartmentMetric } from '../types';
 
 interface DepartmentDistributionChartProps {
   data: DepartmentMetric[];

@@ -6,23 +6,22 @@
 export const API_ENDPOINTS = {
   DASHBOARD: {
     SUMMARY: '/dashboard/summary',
-    ATTENDANCE_TRENDS: '/dashboard/attendance-trends',
-    WORKFORCE_DISTRIBUTION: '/dashboard/workforce-distribution',
-    DEPARTMENT_METRICS: '/dashboard/departments',
-    RECENT_ACTIVITIES: '/dashboard/recent-activities',
+    ATTENDANCE: '/dashboard/attendance',
+    ATTENDANCE_TRENDS: '/dashboard/attendance',
+    DISTRIBUTION: '/dashboard/distribution',
+    WORKFORCE_DISTRIBUTION: '/dashboard/distribution',
   },
   EMPLOYEES: {
     BASE: '/employees',
-    BY_ID: (id: string) => `/employees/${encodeURIComponent(id)}`,
-    SEARCH: '/employees/search',
+    BY_ID: (id: string | number) => `/employees/${encodeURIComponent(String(id))}`,
   },
   DEPARTMENTS: {
     BASE: '/departments',
-    BY_ID: (id: string) => `/departments/${encodeURIComponent(id)}`,
+    BY_ID: (id: string | number) => `/departments/${encodeURIComponent(String(id))}`,
   },
   ATTENDANCE: {
     BASE: '/attendance',
-    SUMMARY: '/attendance/summary',
-    LOG: '/attendance/log',
   },
+  HEALTH: '/health',
 } as const;
+

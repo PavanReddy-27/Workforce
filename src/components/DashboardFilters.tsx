@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   Box,
@@ -15,13 +15,30 @@ import {
   alpha,
 } from '@mui/material';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import {
-  DEPARTMENTS,
-  LOCATIONS,
-  EMPLOYMENT_TYPES,
-  TIME_RANGES,
-  type FilterState,
-} from '../data/mockData';
+import type { FilterState } from '../types';
+import { departmentService } from '../services/departments.service';
+
+const TIME_RANGES: { value: '7d' | '30d' | '90d' | '1y'; label: string }[] = [
+  { value: '7d', label: '7D' },
+  { value: '30d', label: '30D' },
+  { value: '90d', label: '90D' },
+  { value: '1y', label: '1Y' },
+];
+
+const EMPLOYMENT_STATUS_OPTIONS = [
+  'All Types',
+  'Active',
+  'On Leave',
+  'Terminated',
+];
+
+const DEFAULT_LOCATIONS = [
+  'All Locations',
+  'San Francisco HQ',
+  'London Tech Hub',
+  'Singapore Office',
+  'Remote Global',
+];
 
 interface DashboardFiltersProps {
   filters: FilterState;
@@ -36,6 +53,34 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+
+  const [departmentOptions, setDepartmentOptions] = useState<string[]>([
+    'All Departments',
+    'Engineering',
+    'Product & Design',
+    'Sales & Marketing',
+    'Customer Success',
+    'Human Resources',
+    'Finance & Legal',
+  ]);
+
+  useEffect(() => {
+    let active = true;
+    departmentService
+      .getDepartments()
+      .then((res) => {
+        if (active && res.success && Array.isArray(res.data)) {
+          setDepartmentOptions(['All Departments', ...res.data.map((d) => d.name)]);
+        }
+      })
+      .catch(() => {
+        // Fallback maintained
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const isFiltered =
     filters.department !== 'All Departments' ||
@@ -141,7 +186,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               onChange={(e) => onFilterChange({ ...filters, department: e.target.value })}
               sx={selectSx}
             >
-              {DEPARTMENTS.map((d) => (
+              {departmentOptions.map((d) => (
                 <MenuItem key={d} value={d} sx={{ fontSize: '0.8125rem' }}>
                   {d}
                 </MenuItem>
@@ -169,7 +214,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               onChange={(e) => onFilterChange({ ...filters, location: e.target.value })}
               sx={selectSx}
             >
-              {LOCATIONS.map((l) => (
+              {DEFAULT_LOCATIONS.map((l) => (
                 <MenuItem key={l} value={l} sx={{ fontSize: '0.8125rem' }}>
                   {l}
                 </MenuItem>
@@ -197,7 +242,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               onChange={(e) => onFilterChange({ ...filters, employmentType: e.target.value })}
               sx={selectSx}
             >
-              {EMPLOYMENT_TYPES.map((t) => (
+              {EMPLOYMENT_STATUS_OPTIONS.map((t) => (
                 <MenuItem key={t} value={t} sx={{ fontSize: '0.8125rem' }}>
                   {t}
                 </MenuItem>

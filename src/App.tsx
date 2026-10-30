@@ -31,13 +31,32 @@ import { RecentActivity } from './components/RecentActivity';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 import { EmptyState } from './components/EmptyState';
 import { ErrorState } from './components/ErrorState';
-import {
-  DEPARTMENTS,
-  LOCATIONS,
-  EMPLOYMENT_TYPES,
-} from './data/mockData';
+import { EmployeeTable } from './features/employees';
 import type { FilterState } from './types';
 import { useDashboardData } from './hooks';
+
+const AVAILABLE_DEPARTMENTS = [
+  'Engineering',
+  'Product & Design',
+  'Sales & Marketing',
+  'Customer Success',
+  'Human Resources',
+  'Finance & Legal',
+];
+
+const AVAILABLE_LOCATIONS = [
+  'San Francisco HQ',
+  'London Tech Hub',
+  'Singapore Office',
+  'Remote Global',
+];
+
+const AVAILABLE_CONTRACT_TYPES = [
+  'Full-Time',
+  'Part-Time',
+  'Contractor',
+  'Intern',
+];
 
 export const App: React.FC = () => {
   // Theme state: default to crisp light mode (Stackly visual reference)
@@ -80,6 +99,10 @@ export const App: React.FC = () => {
     departmentChartData,
     workforceDonutSegments,
     filteredActivities,
+    loading,
+    error,
+    partialErrors,
+    refetch,
   } = useDashboardData(filters);
 
   const handleToggleMode = () => {
@@ -209,82 +232,97 @@ export const App: React.FC = () => {
                 </Box>
               </Box>
 
-              {/* Filters Component (all 4 required filters + reset action) */}
-              <DashboardFilters
-                filters={filters}
-                onFilterChange={setFilters}
-                filteredHeadcount={totalHeadcount}
-              />
-
-              {/* Conditional States Rendering */}
-              {viewState === 'loading' ? (
-                <LoadingSkeleton />
-              ) : viewState === 'error' ? (
-                <ErrorState onRetry={() => setViewState('normal')} />
-              ) : viewState === 'empty' || totalHeadcount === 0 ? (
-                <EmptyState onResetFilters={handleResetAllFilters} />
+              {/* Main Content: Overview Dashboard or Employee Directory */}
+              {activeTab === 'directory' ? (
+                <EmployeeTable />
               ) : (
                 <>
-                  {/* Exactly 5 Primary KPI Cards in a balanced desktop grid */}
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: {
-                        xs: '1fr',
-                        sm: 'repeat(2, 1fr)',
-                        md: 'repeat(3, 1fr)',
-                        lg: 'repeat(5, 1fr)',
-                      },
-                      gap: 2,
-                      mb: 2.5,
-                    }}
-                  >
-                    {kpis.map((metric) => (
-                      <KpiCard key={metric.id} metric={metric} />
-                    ))}
-                  </Box>
+                  {/* Filters Component (all 4 required filters + reset action) */}
+                  <DashboardFilters
+                    filters={filters}
+                    onFilterChange={setFilters}
+                    filteredHeadcount={totalHeadcount}
+                  />
 
-                  {/* Row 1: Attendance Trend Chart + Workforce Status Donut */}
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' },
-                      gap: 2.5,
-                      mb: 2.5,
-                      alignItems: 'stretch',
-                    }}
-                  >
-                    <AttendanceTrendChart data={trendPoints} timeRange={filters.timeRange} />
-                    <WorkforceDonutChart
-                      segments={workforceDonutSegments}
-                      totalHeadcount={totalHeadcount}
-                    />
-                  </Box>
+                  {/* Conditional States Rendering */}
+                  {viewState === 'loading' || (loading && kpis.length === 0) ? (
+                    <LoadingSkeleton />
+                  ) : viewState === 'error' || error ? (
+                    <ErrorState onRetry={() => { setViewState('normal'); refetch(); }} />
+                  ) : (viewState === 'empty' || totalHeadcount === 0) && !loading ? (
+                    <EmptyState onResetFilters={handleResetAllFilters} />
+                  ) : (
+                    <>
+                      {/* Exactly 5 Primary KPI Cards in a balanced desktop grid */}
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: {
+                            xs: '1fr',
+                            sm: 'repeat(2, 1fr)',
+                            md: 'repeat(3, 1fr)',
+                            lg: 'repeat(5, 1fr)',
+                          },
+                          gap: 2,
+                          mb: 2.5,
+                        }}
+                      >
+                        {kpis.map((metric) => (
+                          <KpiCard key={metric.id} metric={metric} loading={loading} />
+                        ))}
+                      </Box>
 
-                  {/* Row 2: Department Distribution Chart + Recent Employee Activity */}
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' },
-                      gap: 2.5,
-                      mb: 2.5,
-                      alignItems: 'stretch',
-                    }}
-                  >
-                    <DepartmentDistributionChart
-                      data={departmentChartData}
-                      selectedDepartment={filters.department}
-                      onSelectDepartment={(dept) =>
-                        setFilters((prev) => ({ ...prev, department: dept }))
-                      }
-                    />
-                    <RecentActivity
-                      activities={filteredActivities}
-                      onViewAll={() =>
-                        setSnackbarMessage('Opening complete workforce compliance and event logs.')
-                      }
-                    />
-                  </Box>
+                      {/* Row 1: Attendance Trend Chart + Workforce Status Donut */}
+                      {partialErrors.attendance && (
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                          {partialErrors.attendance}
+                        </Alert>
+                      )}
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' },
+                          gap: 2.5,
+                          mb: 2.5,
+                          alignItems: 'stretch',
+                        }}
+                      >
+                        <AttendanceTrendChart data={trendPoints} timeRange={filters.timeRange} />
+                        <WorkforceDonutChart
+                          segments={workforceDonutSegments}
+                          totalHeadcount={totalHeadcount}
+                        />
+                      </Box>
+
+                      {/* Row 2: Department Distribution Chart + Recent Employee Activity */}
+                      {partialErrors.distribution && (
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                          {partialErrors.distribution}
+                        </Alert>
+                      )}
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' },
+                          gap: 2.5,
+                          mb: 2.5,
+                          alignItems: 'stretch',
+                        }}
+                      >
+                        <DepartmentDistributionChart
+                          data={departmentChartData}
+                          selectedDepartment={filters.department}
+                          onSelectDepartment={(dept) =>
+                            setFilters((prev) => ({ ...prev, department: dept }))
+                          }
+                        />
+                        <RecentActivity
+                          activities={filteredActivities}
+                          onViewAll={() => setActiveTab('directory')}
+                        />
+                      </Box>
+                    </>
+                  )}
                 </>
               )}
             </Container>
@@ -344,7 +382,7 @@ export const App: React.FC = () => {
                   label="Department"
                   onChange={(e) => setNewHireForm({ ...newHireForm, department: e.target.value })}
                 >
-                  {DEPARTMENTS.filter((d) => d !== 'All Departments').map((d) => (
+                  {AVAILABLE_DEPARTMENTS.map((d) => (
                     <MenuItem key={d} value={d}>
                       {d}
                     </MenuItem>
@@ -359,7 +397,7 @@ export const App: React.FC = () => {
                   label="Location Hub"
                   onChange={(e) => setNewHireForm({ ...newHireForm, location: e.target.value })}
                 >
-                  {LOCATIONS.filter((l) => l !== 'All Locations').map((l) => (
+                  {AVAILABLE_LOCATIONS.map((l) => (
                     <MenuItem key={l} value={l}>
                       {l}
                     </MenuItem>
@@ -375,7 +413,7 @@ export const App: React.FC = () => {
                 label="Employment Contract"
                 onChange={(e) => setNewHireForm({ ...newHireForm, type: e.target.value })}
               >
-                {EMPLOYMENT_TYPES.filter((t) => t !== 'All Types').map((t) => (
+                {AVAILABLE_CONTRACT_TYPES.map((t) => (
                   <MenuItem key={t} value={t}>
                     {t}
                   </MenuItem>

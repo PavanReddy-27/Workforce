@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "npx --prefix backend tsx --test tests/**/*.test.ts",
     "server": "npm --prefix backend run dev",
     "server:build": "npm --prefix backend run build",
     "server:start": "npm --prefix backend start",

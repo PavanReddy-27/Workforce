@@ -4,21 +4,33 @@ import {
   CardContent,
   Box,
   Typography,
+  Skeleton,
   useTheme,
 } from '@mui/material';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import type { KpiMetric } from '../data/mockData';
+import type { KpiMetric } from '../types';
 
 interface KpiCardProps {
   metric: KpiMetric;
+  loading?: boolean;
 }
 
-export const KpiCard: React.FC<KpiCardProps> = ({ metric }) => {
+export const KpiCard: React.FC<KpiCardProps> = ({ metric, loading = false }) => {
   const theme = useTheme();
 
-  const isGoodTrend = metric.isPositive;
+  const isGoodTrend = metric.isPositive ?? true;
   const trendColor = isGoodTrend ? theme.palette.success.main : theme.palette.error.main;
+
+  if (loading) {
+    return (
+      <Card sx={{ height: '100%', p: 2 }}>
+        <Skeleton variant="text" width="60%" height={18} sx={{ mb: 1 }} />
+        <Skeleton variant="rectangular" width="45%" height={32} sx={{ mb: 1.5, borderRadius: 1 }} />
+        <Skeleton variant="text" width="80%" height={16} />
+      </Card>
+    );
+  }
 
   return (
     <Card
@@ -67,36 +79,53 @@ export const KpiCard: React.FC<KpiCardProps> = ({ metric }) => {
           {metric.value}
         </Typography>
 
-        {/* Trend row */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 0.25,
-              color: trendColor,
-              fontSize: '0.75rem',
-              fontWeight: 600,
-            }}
-          >
-            {metric.change >= 0 ? (
-              <ArrowUpwardIcon sx={{ fontSize: 13 }} />
-            ) : (
-              <ArrowDownwardIcon sx={{ fontSize: 13 }} />
+        {/* Trend row or subtitle info */}
+        {metric.change !== undefined ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.25,
+                color: trendColor,
+                fontSize: '0.75rem',
+                fontWeight: 600,
+              }}
+            >
+              {metric.change >= 0 ? (
+                <ArrowUpwardIcon sx={{ fontSize: 13 }} />
+              ) : (
+                <ArrowDownwardIcon sx={{ fontSize: 13 }} />
+              )}
+              {Math.abs(metric.change)}%
+            </Box>
+            {metric.period && (
+              <Typography
+                variant="caption"
+                sx={{
+                  color: theme.palette.text.secondary,
+                  fontWeight: 400,
+                  fontSize: '0.7rem',
+                }}
+              >
+                {metric.period}
+              </Typography>
             )}
-            {Math.abs(metric.change)}%
           </Box>
-          <Typography
-            variant="caption"
-            sx={{
-              color: theme.palette.text.secondary,
-              fontWeight: 400,
-              fontSize: '0.7rem',
-            }}
-          >
-            {metric.period}
-          </Typography>
-        </Box>
+        ) : metric.period ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: theme.palette.text.secondary,
+                fontWeight: 500,
+                fontSize: '0.7rem',
+              }}
+            >
+              {metric.period}
+            </Typography>
+          </Box>
+        ) : null}
 
         {/* Secondary helper text */}
         {metric.subtitle && (

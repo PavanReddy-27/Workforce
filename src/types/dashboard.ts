@@ -20,12 +20,12 @@ export interface KpiMetric {
   title: string;
   value: string;
   numericValue: number;
-  change: number; // percentage change
-  isPositive: boolean; // true = positive business connotation
-  period: string;
-  subtitle: string;
-  iconName: 'people' | 'check' | 'cancel' | 'trending_up' | 'event_busy';
-  badgeColor: string;
+  change?: number; // percentage change (optional - do not invent if backend doesn't provide)
+  isPositive?: boolean; // true = positive business connotation
+  period?: string;
+  subtitle?: string;
+  iconName?: 'people' | 'check' | 'cancel' | 'trending_up' | 'event_busy';
+  badgeColor?: string;
 }
 
 export interface AttendanceDataPoint {
@@ -35,6 +35,9 @@ export interface AttendanceDataPoint {
   onLeave: number;
   totalPresent: number;
   attendanceRate: number; // percentage (0–100)
+  present?: number;
+  absent?: number;
+  totalRecorded?: number;
 }
 
 export interface DepartmentMetric {

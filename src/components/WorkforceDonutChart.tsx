@@ -17,7 +17,7 @@ import {
 } from 'recharts';
 import PieChartOutlineOutlinedIcon from '@mui/icons-material/PieChartOutlineOutlined';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
-import type { DistributionSegment } from '../data/mockData';
+import type { DistributionSegment } from '../types';
 
 interface WorkforceDonutChartProps {
   segments: DistributionSegment[];

@@ -102,6 +102,8 @@ export interface DashboardSummaryKpis {
 export interface AttendanceTrendItem {
   date: string;
   present: number;
+  inOffice: number;
+  remote: number;
   absent: number;
   onLeave: number;
   totalRecorded: number;

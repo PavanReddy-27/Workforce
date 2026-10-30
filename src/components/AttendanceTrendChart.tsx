@@ -22,7 +22,7 @@ import {
 } from 'recharts';
 import ShowChartIcon from '@mui/icons-material/ShowChart';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
-import type { AttendanceDataPoint } from '../data/mockData';
+import type { AttendanceDataPoint } from '../types';
 
 interface AttendanceTrendChartProps {
   data: AttendanceDataPoint[];

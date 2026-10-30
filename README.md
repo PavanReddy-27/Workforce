@@ -112,9 +112,21 @@ Workforce/
 
 ## Build & Testing Verification
 
-The project has been tested and validated using strict TypeScript checks, ESLint verification, and production compilation:
+The project is fully integrated across frontend and backend with automated unit and integration tests, strict TypeScript checks, ESLint verification, and production compilation:
 
 ```bash
+# Start backend server (port 3000)
+npm run server
+
+# Start frontend application (port 5173)
+npm run dev
+
+# Run Frontend & Live Integration Tests (18 tests)
+npm test
+
+# Run Backend Unit & Integration Tests (50 tests)
+npm run server:test
+
 # Run ESLint validation
 npm run lint
 
@@ -125,10 +137,12 @@ npm run build
 npm run preview
 ```
 
-### Build Status
+### Build & Test Status
+- **Automated Tests**: 68 tests passing (18 frontend/integration + 50 backend)
 - **ESLint**: 0 errors, 0 warnings
 - **TypeScript (`tsc -b`)**: Clean compilation
 - **Vite Build**: Minified and bundled successfully
+- **Integration Documentation**: Available in [`docs/SPRINT-3-INTEGRATION.md`](./docs/SPRINT-3-INTEGRATION.md)
 
 ---
 

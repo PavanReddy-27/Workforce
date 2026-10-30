@@ -164,6 +164,8 @@ export class DashboardRepository {
       SELECT
         a.attendance_date as date,
         SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present,
+        SUM(CASE WHEN a.status = 'Present' AND e.location != 'Remote Global' THEN 1 ELSE 0 END) as inOffice,
+        SUM(CASE WHEN a.status = 'Present' AND e.location = 'Remote Global' THEN 1 ELSE 0 END) as remote,
         SUM(CASE WHEN a.status = 'Absent' THEN 1 ELSE 0 END) as absent,
         SUM(CASE WHEN a.status = 'On Leave' THEN 1 ELSE 0 END) as onLeave,
         COUNT(*) as totalRecorded
@@ -178,6 +180,8 @@ export class DashboardRepository {
     const rows = this.db.prepare(sql).all(...params) as {
       date: string;
       present: number;
+      inOffice: number;
+      remote: number;
       absent: number;
       onLeave: number;
       totalRecorded: number;
@@ -189,6 +193,8 @@ export class DashboardRepository {
       return {
         date: r.date,
         present: r.present,
+        inOffice: r.inOffice,
+        remote: r.remote,
         absent: r.absent,
         onLeave: r.onLeave,
         totalRecorded: recorded,

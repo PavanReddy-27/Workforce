@@ -22,7 +22,7 @@ import PersonAddAlt1OutlinedIcon from '@mui/icons-material/PersonAddAlt1Outlined
 import FlightTakeoffOutlinedIcon from '@mui/icons-material/FlightTakeoffOutlined';
 import SyncAltOutlinedIcon from '@mui/icons-material/SyncAltOutlined';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
-import type { ActivityItem } from '../data/mockData';
+import type { ActivityItem } from '../types';
 
 interface RecentActivityProps {
   activities: ActivityItem[];
