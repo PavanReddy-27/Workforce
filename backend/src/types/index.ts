@@ -105,14 +105,13 @@ export interface DashboardSummaryKpis {
   filtersApplied: {
     department?: string;
     location?: string;
+    status?: string;
   };
 }
 
 export interface AttendanceTrendItem {
   date: string;
   present: number;
-  inOffice: number;
-  remote: number;
   absent: number;
   onLeave: number;
   totalRecorded: number;

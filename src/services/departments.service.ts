@@ -7,24 +7,24 @@
 
 import { httpClient, type RequestOptions } from './api/httpClient';
 import { API_ENDPOINTS } from './api/apiEndpoints';
-import type { ApiResponse, Department } from '../types';
+import type { ApiResponse, BackendDepartment } from '../types';
 
 export interface DepartmentRequestOptions extends RequestOptions {
   forceRefresh?: boolean;
 }
 
 export interface IDepartmentService {
-  getDepartments(options?: DepartmentRequestOptions): Promise<ApiResponse<Department[]>>;
-  getDepartmentById(id: string | number, options?: RequestOptions): Promise<ApiResponse<Department>>;
+  getDepartments(options?: DepartmentRequestOptions): Promise<ApiResponse<BackendDepartment[]>>;
+  getDepartmentById(id: string | number, options?: RequestOptions): Promise<ApiResponse<BackendDepartment>>;
 }
 
 export class DepartmentApiService implements IDepartmentService {
-  private cache: ApiResponse<Department[]> | null = null;
+  private cache: ApiResponse<BackendDepartment[]> | null = null;
   private cacheTimestamp = 0;
-  private inflightPromise: Promise<ApiResponse<Department[]>> | null = null;
+  private inflightPromise: Promise<ApiResponse<BackendDepartment[]>> | null = null;
   private readonly CACHE_TTL_MS = 60_000; // 60-second in-memory TTL
 
-  async getDepartments(options?: DepartmentRequestOptions): Promise<ApiResponse<Department[]>> {
+  async getDepartments(options?: DepartmentRequestOptions): Promise<ApiResponse<BackendDepartment[]>> {
     const now = Date.now();
     // Return cached list if still fresh and forceRefresh not requested
     if (!options?.forceRefresh && this.cache && now - this.cacheTimestamp < this.CACHE_TTL_MS) {
@@ -38,7 +38,7 @@ export class DepartmentApiService implements IDepartmentService {
 
     this.inflightPromise = (async () => {
       try {
-        const response = await httpClient.get<Department[]>(API_ENDPOINTS.DEPARTMENTS.BASE, options);
+        const response = await httpClient.get<BackendDepartment[]>(API_ENDPOINTS.DEPARTMENTS.BASE, options);
         if (response.success && response.data) {
           this.cache = response;
           this.cacheTimestamp = Date.now();
@@ -55,8 +55,8 @@ export class DepartmentApiService implements IDepartmentService {
   async getDepartmentById(
     id: string | number,
     options?: RequestOptions
-  ): Promise<ApiResponse<Department>> {
-    return httpClient.get<Department>(API_ENDPOINTS.DEPARTMENTS.BY_ID(id), options);
+  ): Promise<ApiResponse<BackendDepartment>> {
+    return httpClient.get<BackendDepartment>(API_ENDPOINTS.DEPARTMENTS.BY_ID(id), options);
   }
 }
 

@@ -12,6 +12,47 @@ export interface DashboardFilterCriteria {
   date?: string;
   department?: string; // ID or name
   location?: string;
+  status?: string;
+  search?: string;
+}
+
+function buildEmployeeFilters(
+  options: DashboardFilterCriteria,
+  defaultStatus?: string
+): { clauses: string[]; params: (string | number)[] } {
+  const clauses: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (options.status || defaultStatus) {
+    clauses.push('e.employment_status = ?');
+    params.push(options.status ?? defaultStatus ?? '');
+  }
+  if (options.department && options.department !== 'All Departments') {
+    const departmentId = Number(options.department);
+    if (!isNaN(departmentId)) {
+      clauses.push('e.department_id = ?');
+      params.push(departmentId);
+    } else {
+      clauses.push('LOWER(d.name) = LOWER(?)');
+      params.push(options.department);
+    }
+  }
+  if (options.location && options.location !== 'All Locations') {
+    clauses.push('e.location = ?');
+    params.push(options.location);
+  }
+  if (options.search?.trim()) {
+    const term = `%${options.search.trim().toLowerCase()}%`;
+    clauses.push(`(
+      LOWER(e.first_name) LIKE ? OR
+      LOWER(e.last_name) LIKE ? OR
+      LOWER(e.employee_code) LIKE ? OR
+      LOWER(e.email) LIKE ?
+    )`);
+    params.push(term, term, term, term);
+  }
+
+  return { clauses, params };
 }
 
 export class DashboardRepository {
@@ -41,7 +82,7 @@ export class DashboardRepository {
 
   /**
    * Five Primary KPIs calculation adhering strictly to business rules:
-   * - Total Employees: Active employees matching optional dept/location
+   * - Total Employees: All matching employee records unless a status is selected
    * - Present Today: Active employees with Present status on effective date
    * - Absent Today: Active employees with Absent status on effective date
    * - On Leave: Active employees with On Leave status on effective date
@@ -50,28 +91,12 @@ export class DashboardRepository {
   public getSummaryKpis(options: DashboardFilterCriteria): DashboardSummaryKpis {
     const effectiveDate = this.getEffectiveDate(options.date);
 
-    const empWhereClauses: string[] = ["e.employment_status = 'Active'"];
-    const empParams: (string | number)[] = [];
+    const employeeFilters = buildEmployeeFilters(options);
+    const empWhereSql = employeeFilters.clauses.length
+      ? employeeFilters.clauses.join(' AND ')
+      : '1 = 1';
 
-    if (options.department && options.department !== 'All Departments') {
-      const deptNum = Number(options.department);
-      if (!isNaN(deptNum)) {
-        empWhereClauses.push('e.department_id = ?');
-        empParams.push(deptNum);
-      } else {
-        empWhereClauses.push('LOWER(d.name) = LOWER(?)');
-        empParams.push(options.department);
-      }
-    }
-
-    if (options.location && options.location !== 'All Locations') {
-      empWhereClauses.push('e.location = ?');
-      empParams.push(options.location);
-    }
-
-    const empWhereSql = empWhereClauses.join(' AND ');
-
-    // 1. Total Active Employees
+    // 1. Total employees matching the dashboard filters
     const totalEmpSql = `
       SELECT COUNT(*) as count
       FROM employees e
@@ -79,10 +104,12 @@ export class DashboardRepository {
       WHERE ${empWhereSql}
     `;
     const totalEmployees = (
-      this.db.prepare(totalEmpSql).get(...empParams) as { count: number }
+      this.db.prepare(totalEmpSql).get(...employeeFilters.params) as { count: number }
     ).count;
 
-    // 2. Attendance Counts for Active Employees on Effective Date
+    // Attendance remains scoped to Active employees unless a status filter is selected.
+    const attendanceFilters = buildEmployeeFilters(options, 'Active');
+    const attendanceWhereSql = attendanceFilters.clauses.join(' AND ');
     const attendanceSql = `
       SELECT 
         a.status,
@@ -90,11 +117,14 @@ export class DashboardRepository {
       FROM attendance a
       JOIN employees e ON a.employee_id = e.id
       LEFT JOIN departments d ON e.department_id = d.id
-      WHERE a.attendance_date = ? AND ${empWhereSql}
+      WHERE a.attendance_date = ? AND ${attendanceWhereSql}
       GROUP BY a.status
     `;
 
-    const statusRows = this.db.prepare(attendanceSql).all(effectiveDate, ...empParams) as {
+    const statusRows = this.db.prepare(attendanceSql).all(
+      effectiveDate,
+      ...attendanceFilters.params
+    ) as {
       status: string;
       count: number;
     }[];
@@ -125,6 +155,7 @@ export class DashboardRepository {
       filtersApplied: {
         department: options.department,
         location: options.location,
+        status: options.status,
       },
     };
   }
@@ -137,35 +168,21 @@ export class DashboardRepository {
     endDate: string;
     department?: string;
     location?: string;
+    status?: string;
+    search?: string;
   }): AttendanceTrendItem[] {
-    const whereClauses: string[] = [
-      'a.attendance_date BETWEEN ? AND ?',
-      "e.employment_status = 'Active'",
+    const employeeFilters = buildEmployeeFilters(options, 'Active');
+    const whereClauses = ['a.attendance_date BETWEEN ? AND ?', ...employeeFilters.clauses];
+    const params: (string | number)[] = [
+      options.startDate,
+      options.endDate,
+      ...employeeFilters.params,
     ];
-    const params: (string | number)[] = [options.startDate, options.endDate];
-
-    if (options.department && options.department !== 'All Departments') {
-      const deptNum = Number(options.department);
-      if (!isNaN(deptNum)) {
-        whereClauses.push('e.department_id = ?');
-        params.push(deptNum);
-      } else {
-        whereClauses.push('LOWER(d.name) = LOWER(?)');
-        params.push(options.department);
-      }
-    }
-
-    if (options.location && options.location !== 'All Locations') {
-      whereClauses.push('e.location = ?');
-      params.push(options.location);
-    }
 
     const sql = `
       SELECT
         a.attendance_date as date,
         SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present,
-        SUM(CASE WHEN a.status = 'Present' AND e.location != 'Remote Global' THEN 1 ELSE 0 END) as inOffice,
-        SUM(CASE WHEN a.status = 'Present' AND e.location = 'Remote Global' THEN 1 ELSE 0 END) as remote,
         SUM(CASE WHEN a.status = 'Absent' THEN 1 ELSE 0 END) as absent,
         SUM(CASE WHEN a.status = 'On Leave' THEN 1 ELSE 0 END) as onLeave,
         COUNT(*) as totalRecorded
@@ -180,8 +197,6 @@ export class DashboardRepository {
     const rows = this.db.prepare(sql).all(...params) as {
       date: string;
       present: number;
-      inOffice: number;
-      remote: number;
       absent: number;
       onLeave: number;
       totalRecorded: number;
@@ -193,8 +208,6 @@ export class DashboardRepository {
       return {
         date: r.date,
         present: r.present,
-        inOffice: r.inOffice,
-        remote: r.remote,
         absent: r.absent,
         onLeave: r.onLeave,
         totalRecorded: recorded,
@@ -204,27 +217,34 @@ export class DashboardRepository {
   }
 
   /**
-   * Real SQL aggregation for workforce distribution
+   * Real SQL aggregation for the filtered employee population
    */
-  public getWorkforceDistribution(): WorkforceDistribution {
-    // Total employees excluding Terminated
-    const totalStmt = this.db.prepare(
-      "SELECT COUNT(*) as count FROM employees WHERE employment_status != 'Terminated'"
-    );
-    const totalEmployees = (totalStmt.get() as { count: number }).count;
+  public getWorkforceDistribution(options: DashboardFilterCriteria = {}): WorkforceDistribution {
+    const employeeFilters = buildEmployeeFilters(options);
+    const filteredWhereSql = employeeFilters.clauses.length
+      ? employeeFilters.clauses.join(' AND ')
+      : '1 = 1';
+    const totalStmt = this.db.prepare(`
+      SELECT COUNT(*) as count
+      FROM employees e
+      LEFT JOIN departments d ON e.department_id = d.id
+      WHERE ${filteredWhereSql}
+    `);
+    const totalEmployees = (totalStmt.get(...employeeFilters.params) as { count: number }).count;
 
     // By Department
-    const deptSql = `
+    const scopedDeptSql = `
       SELECT
         d.id as departmentId,
         d.name as departmentName,
         COUNT(e.id) as headcount
       FROM departments d
-      LEFT JOIN employees e ON d.id = e.department_id AND e.employment_status != 'Terminated'
+      LEFT JOIN employees e ON d.id = e.department_id
+      WHERE ${filteredWhereSql}
       GROUP BY d.id
       ORDER BY headcount DESC
     `;
-    const deptRows = this.db.prepare(deptSql).all() as {
+    const deptRows = this.db.prepare(scopedDeptSql).all(...employeeFilters.params) as {
       departmentId: number;
       departmentName: string;
       headcount: number;
@@ -240,13 +260,15 @@ export class DashboardRepository {
     // By Status
     const statusSql = `
       SELECT
-        employment_status as status,
+        e.employment_status as status,
         COUNT(*) as count
-      FROM employees
-      GROUP BY employment_status
+      FROM employees e
+      LEFT JOIN departments d ON e.department_id = d.id
+      WHERE ${filteredWhereSql}
+      GROUP BY e.employment_status
       ORDER BY count DESC
     `;
-    const statusRows = this.db.prepare(statusSql).all() as {
+    const statusRows = this.db.prepare(statusSql).all(...employeeFilters.params) as {
       status: string;
       count: number;
     }[];

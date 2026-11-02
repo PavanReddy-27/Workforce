@@ -31,6 +31,10 @@ export class EmployeeService {
     };
   }
 
+  public getLocations(): string[] {
+    return this.employeeRepo.findLocations();
+  }
+
   public getEmployeeById(id: number | string): EmployeeWithDepartment | null {
     const employee = this.employeeRepo.findById(id);
     return employee || null;

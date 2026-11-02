@@ -148,7 +148,7 @@ describe('Repository Layer Unit Tests', () => {
   describe('DashboardRepository', () => {
     it('should accurately calculate the 5 primary KPIs', () => {
       const kpis = dashRepo.getSummaryKpis({});
-      expect(kpis.totalEmployees).toBe(28); // 30 seeded - 1 Terminated - 1 On Leave? No, active employees = 28
+      expect(kpis.totalEmployees).toBe(30);
       expect(kpis.presentToday).toBeGreaterThan(0);
       expect(kpis.attendanceRate).toBeGreaterThan(80);
       expect(kpis.attendanceRate).toBeLessThanOrEqual(100);
@@ -183,7 +183,7 @@ describe('Repository Layer Unit Tests', () => {
     it('should return real SQL aggregations for workforce distribution', () => {
       const dist = dashRepo.getWorkforceDistribution();
       expect(dist.byDepartment.length).toBe(6);
-      expect(dist.totalEmployees).toBe(29); // 30 - 1 Terminated = 29
+      expect(dist.totalEmployees).toBe(30);
       const sumDeptPercentages = dist.byDepartment.reduce((acc, d) => acc + d.percentage, 0);
       expect(Math.round(sumDeptPercentages)).toBeCloseTo(100, 0);
 

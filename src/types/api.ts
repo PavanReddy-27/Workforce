@@ -6,6 +6,7 @@
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
+  pagination?: PaginationMeta;
   message?: string;
   timestamp: string;
 }
@@ -94,14 +95,13 @@ export interface BackendDashboardSummary {
   filtersApplied: {
     department?: string;
     location?: string;
+    status?: string;
   };
 }
 
 export interface BackendAttendanceTrendItem {
   date: string;
   present: number;
-  inOffice: number;
-  remote: number;
   absent: number;
   onLeave: number;
   totalRecorded: number;
@@ -144,3 +144,14 @@ export interface BackendEmployee {
   updated_at: string;
 }
 
+/**
+ * Department record as returned by the backend REST API.
+ * Note: The legacy `Department` model in models.ts has extra fields not returned by the API.
+ */
+export interface BackendDepartment {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}

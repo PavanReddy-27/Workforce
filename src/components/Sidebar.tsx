@@ -26,7 +26,6 @@ import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalance
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { tokens } from '../theme/theme';
 
 interface SidebarProps {
@@ -305,13 +304,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </Box>
             )}
           </Box>
-          {(!collapsed || isMobile) && (
-            <Tooltip title="Log out" arrow>
-              <IconButton size="small" sx={{ color: theme.palette.text.secondary }} aria-label="Log out">
-                <LogoutOutlinedIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Tooltip>
-          )}
         </Box>
       </Box>
     </Box>

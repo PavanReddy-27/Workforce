@@ -53,7 +53,7 @@ src/
 ├── components/                 # Presentation and visualization components
 │   ├── AttendanceTrendChart.tsx # Stacked Area chart with headcount/rate toggle & empty state
 │   ├── DashboardFilters.tsx    # Multi-dimensional filter toolbar (Date, Dept, Loc, Status)
-│   ├── DepartmentDistributionChart.tsx # Bar chart with headcount & eNPS toggles & click filter
+│   ├── DepartmentDistributionChart.tsx # SQLite headcount by department with click filtering
 │   ├── EmptyState.tsx          # Reusable zero-data graphic with action button
 │   ├── ErrorState.tsx          # Reusable error alert with retry trigger
 │   ├── KpiCard.tsx             # Metric card displaying values, trend deltas, and progress bars

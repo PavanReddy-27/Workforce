@@ -11,6 +11,8 @@ import {
 const router = Router();
 const controller = new EmployeeController();
 
+router.get('/locations', controller.getLocations);
+
 router.get(
   '/',
   validateRequest({ query: getEmployeesQuerySchema }),

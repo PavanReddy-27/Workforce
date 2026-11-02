@@ -15,6 +15,10 @@ export class EmployeeController {
     });
   };
 
+  public getLocations = (_req: Request, res: Response): void => {
+    sendSuccess(res, this.employeeService.getLocations());
+  };
+
   public getEmployeeById = (req: Request, res: Response): void => {
     const id = String(req.params.id);
     const employee = this.employeeService.getEmployeeById(id);

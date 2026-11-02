@@ -29,6 +29,7 @@ import { getAttendanceQuerySchema } from '../../src/schemas/attendance.schema';
 import {
   getDashboardSummaryQuerySchema,
   getDashboardAttendanceQuerySchema,
+  getDashboardDistributionQuerySchema,
 } from '../../src/schemas/dashboard.schema';
 
 /**
@@ -85,6 +86,7 @@ export const createTestApp = (db: Database.Database): Express => {
     validateRequest({ query: getEmployeesQuerySchema }),
     empCtrl.getEmployees
   );
+  app.get('/api/employees/locations', empCtrl.getLocations);
   app.get(
     '/api/employees/:id',
     validateRequest({ params: getEmployeeByIdParamsSchema }),
@@ -114,7 +116,11 @@ export const createTestApp = (db: Database.Database): Express => {
     validateRequest({ query: getDashboardAttendanceQuerySchema }),
     dashCtrl.getAttendance
   );
-  app.get('/api/dashboard/distribution', dashCtrl.getDistribution);
+  app.get(
+    '/api/dashboard/distribution',
+    validateRequest({ query: getDashboardDistributionQuerySchema }),
+    dashCtrl.getDistribution
+  );
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -1,19 +1,19 @@
 # Workforce Analytics Platform
 
-An enterprise-grade, full-stack Workforce Analytics Platform providing real-time headcount metrics, work-mode velocity, organizational distribution, and server-side employee directory operations. Built with React 19, TypeScript, Material UI, Recharts, Express, and an embedded SQLite relational database implementing the Repository Pattern.
+An enterprise-grade, full-stack Workforce Analytics Platform providing SQLite-backed headcount metrics, attendance trends, organizational distribution, and server-side employee directory operations. Built with React, TypeScript, Material UI, Recharts, Express, and SQLite using the Repository Pattern.
 
 ---
 
 ## 1. Project Overview
 
-The **Workforce Analytics Platform** provides HR leaders, department heads, and operations executives with an operational dashboard for monitoring staff headcount, daily attendance presence (in-office vs. remote vs. leave), business unit distributions, and comprehensive employee directory records.
+The **Workforce Analytics Platform** provides HR leaders, department heads, and operations executives with an operational dashboard for monitoring staff headcount, recorded daily attendance statuses, business unit distributions, and employee directory records.
 
 ### Key Capabilities
-- **Operational Headcount & Presence KPIs**: Real-time evaluation of active headcount, today's attendance rates, present/absent ratios, and approved leaves.
-- **Presence Velocity & Work-Mode Trends**: Historical time-series analytics distinguishing physical in-office attendance from remote work.
-- **Organizational Distribution**: Staff allocations by business unit and employment contract status with integrated eNPS satisfaction analytics.
+- **Operational Headcount & Presence KPIs**: Real-time evaluation of total employee records across employment statuses, today's attendance rates, present/absent ratios, and approved leaves.
+- **Attendance Trends**: Historical time-series analytics for recorded present, absent, and on-leave counts, with an attendance-rate view.
+- **Organizational Distribution**: SQLite-backed employee headcount by department and current employment status.
 - **Enterprise Employee Directory**: Server-side searching, multi-field filtering (department, location, status), bidirectional sorting, and fast pagination.
-- **Live Onboarding Workflow**: Add employee requisition modal persisting directly into the SQLite database with immediate dashboard metric synchronization.
+- **Live Employee Creation**: Add employee form persists supported employee fields to SQLite; contract type, promotion, and audit history are not modeled.
 
 ---
 
@@ -22,11 +22,12 @@ The **Workforce Analytics Platform** provides HR leaders, department heads, and 
 | Feature Group | Implemented Functionality |
 |---|---|
 | **Five Primary KPI Cards** | Exactly 5 core metrics (**Total Employees**, **Present Today**, **Absent Today**, **Attendance Rate**, **On Leave**) computed directly via SQL aggregation from live attendance records. |
-| **Attendance Analytics** | Dual-mode stacked area chart tracking daily headcount breakdown (In-Office, Remote, Leave) with a toggle to view Attendance Rate (%) time-series. |
-| **Workforce Status Donut** | Donut chart rendering employment contracts (Full-Time, Contractor, Part-Time, Intern) with center headcount and interactive breakdown legend. |
-| **Department Distribution** | Dual-mode bar chart comparing staff headcount and open positions, with toggle to view eNPS satisfaction scores. Clicking any bar instantly isolates that department across the dashboard. |
+| **Attendance Analytics** | Stacked area chart for recorded present, absent, and on-leave counts, with a toggle to view attendance rate over the selected date range. |
+| **Workforce Status Donut** | Donut chart rendering SQLite employment status counts across all employee records, including terminated employees. |
+| **Department Distribution** | SQL-backed bar chart of employee headcount by department. Clicking a bar filters dashboard analytics to that department. |
+| **Recent Hires** | Displays employee records ordered by their persisted hire date; it does not represent promotions, transfers, or a full audit log. |
 | **Employee Directory Table** | Server-side paginated data table featuring 300ms debounced search (matching name, employee code, or email), multi-field dropdown filters, and column sorting. |
-| **Multi-Dimensional Filters** | Global filter bar supporting synchronized filtering across Department, Location, Employment Status, and Date Range (`7d`, `30d`, `90d`, `1y`) with a single-click reset. |
+| **Multi-Dimensional Filters** | Dashboard filters for department, location, employment status, attendance date range (`7d`, `30d`, `90d`, `1y`), and employee search. Employee counts and distributions use the same search and workforce filters. Department and location options are loaded from API data. |
 | **Responsive UI & Themes** | Cohesive slate-blue dark mode (`#0F172A`) and crisp off-white light mode (`#F8FAFC`). Fluid layouts for Desktop (5 KPI cols), Tablet (2+2+1 grid), and Mobile (stacked cards + slide-out drawer). |
 | **Resilient State Indicators** | Skeleton loaders during fetch, empty state visual fallbacks with filter reset triggers, and connection error banners with manual retry buttons. |
 | **Persistent SQLite Storage** | Fully persistent relational database (`better-sqlite3`) with foreign key enforcement, B-Tree indexes, and ACID guarantees. |
@@ -237,7 +238,6 @@ erDiagram
         INTEGER employee_id FK
         TEXT attendance_date
         TEXT status
-        TEXT work_mode
         TEXT check_in_time
         TEXT check_out_time
     }
@@ -257,18 +257,19 @@ All endpoints return uniform response envelopes. Base URL: `http://localhost:300
 | Method | Endpoint | Description | Key Query / Body Parameters |
 |---|---|---|---|
 | `GET` | `/health` | Server health and database check | None |
-| `GET` | `/dashboard/summary` | Primary 5 KPI metrics | `date`, `department`, `location` |
-| `GET` | `/dashboard/attendance` | Date-grouped presence trends | `startDate`, `endDate`, `department`, `location` |
-| `GET` | `/dashboard/distribution`| Department & contract distributions | `location` |
+| `GET` | `/dashboard/summary` | Primary 5 KPI metrics | `date`, `department`, `location`, `status`, `search` |
+| `GET` | `/dashboard/attendance` | Date-grouped presence trends | `startDate`, `endDate`, `department`, `location`, `status`, `search` |
+| `GET` | `/dashboard/distribution`| Department & employment status distributions | `department`, `location`, `status`, `search` |
 | `GET` | `/departments` | List all 6 departments | None |
 | `GET` | `/departments/:id` | Fetch department by ID | `id` |
 | `GET` | `/employees` | Paginated employee directory | `page`, `limit`, `search`, `department`, `location`, `status`, `sortBy`, `sortOrder` |
+| `GET` | `/employees/locations` | Distinct locations stored for employees | None |
 | `GET` | `/employees/:id` | Fetch single employee | `id` (numeric or `EMP-001`) |
 | `POST`| `/employees` | Onboard new employee (HTTP 201) | `first_name`, `last_name`, `job_title`, `department`, `location`, `employment_status` |
 | `GET` | `/attendance` | Paginated daily attendance logs | `page`, `limit`, `employeeId`, `date`, `status` |
 
 ### KPI Calculation Rules
-- **Total Employees**: Count of active staff (`employment_status = 'Active'`).
+- **Total Employees**: Count of all employee records matching department, location, status, and search filters. Without a status filter, this includes all employment statuses.
 - **Present Today**: Count of active staff with status `'Present'` on target date.
 - **Absent Today**: Count of active staff with status `'Absent'` on target date.
 - **On Leave**: Count of active staff with status `'On Leave'` on target date.
@@ -287,7 +288,7 @@ The project includes unit, repository, service, integration, and E2E test suites
 # Run frontend client and live E2E integration tests (23 tests)
 npm test
 
-# Run backend unit, repository, and REST integration tests (55 tests)
+# Run backend unit, repository, and REST integration tests (59 tests)
 npm run server:test
 
 # Run ESLint across all TypeScript source files
@@ -301,9 +302,9 @@ npm run server:build
 ```
 
 ### Verification Results Summary
-- **Backend Tests (`npm run server:test`)**: 55/55 passed (883ms)
+- **Backend Tests (`npm run server:test`)**: 59/59 passed
 - **Frontend & Integration Tests (`npm test`)**: 23/23 passed (457ms)
-- **Total Automated Tests**: **78 passed, 0 failed (100% pass rate)**
+- **Total Automated Tests**: **82 passed, 0 failed (100% pass rate)**
 - **Static Analysis (`npm run lint`)**: 0 warnings, 0 errors
 - **Production Build (`npm run build`)**: Vite built in 567ms (0 errors)
 - **Backend Build (`npm run server:build`)**: TypeScript compiled cleanly (0 errors)

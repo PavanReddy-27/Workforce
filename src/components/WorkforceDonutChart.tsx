@@ -21,7 +21,6 @@ import type { DistributionSegment } from '../types';
 
 interface WorkforceDonutChartProps {
   segments: DistributionSegment[];
-  totalHeadcount: number;
 }
 
 interface CustomTooltipProps {
@@ -63,10 +62,10 @@ const CustomPieTooltip: React.FC<CustomTooltipProps> = ({ active, payload, isDar
 
 export const WorkforceDonutChart: React.FC<WorkforceDonutChartProps> = ({
   segments,
-  totalHeadcount,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const totalHeadcount = segments.reduce((total, segment) => total + segment.value, 0);
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -101,7 +100,7 @@ export const WorkforceDonutChart: React.FC<WorkforceDonutChartProps> = ({
                 Workforce Status
               </Typography>
               <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                Contract & employment breakdown
+                Employee records by employment status
               </Typography>
             </Box>
           </Box>

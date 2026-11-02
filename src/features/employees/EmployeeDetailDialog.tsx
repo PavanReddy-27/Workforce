@@ -32,22 +32,7 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import type { BackendEmployee } from '../../types';
 import { employeeService } from '../../services/employees.service';
-
-const DEPARTMENTS = [
-  'Engineering',
-  'Product & Design',
-  'Sales & Marketing',
-  'Customer Success',
-  'Human Resources',
-  'Finance & Legal',
-];
-
-const LOCATIONS = [
-  'San Francisco HQ',
-  'London Tech Hub',
-  'Singapore Office',
-  'Remote Global',
-];
+import { departmentService } from '../../services/departments.service';
 
 const STATUSES = ['Active', 'On Leave', 'Terminated', 'Suspended'];
 
@@ -84,6 +69,8 @@ export const EmployeeDetailDialog: React.FC<EmployeeDetailDialogProps> = ({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [locations, setLocations] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     first_name: '',
@@ -113,6 +100,34 @@ export const EmployeeDetailDialog: React.FC<EmployeeDetailDialogProps> = ({
     setMode('view');
     setError(null);
   }, [employee, open]);
+
+  React.useEffect(() => {
+    if (!open) return;
+
+    let active = true;
+    Promise.all([departmentService.getDepartments(), employeeService.getLocations()])
+      .then(([departmentResponse, locationResponse]) => {
+        if (!departmentResponse.success || !Array.isArray(departmentResponse.data)) {
+          throw new Error(departmentResponse.message || 'Unable to load departments.');
+        }
+        if (!locationResponse.success || !Array.isArray(locationResponse.data)) {
+          throw new Error(locationResponse.message || 'Unable to load locations.');
+        }
+        if (active) {
+          setDepartments(departmentResponse.data.map((department) => department.name));
+          setLocations(locationResponse.data);
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Unable to load employee edit options.');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [open]);
 
   const handleSave = async () => {
     if (!employee) return;
@@ -249,13 +264,13 @@ export const EmployeeDetailDialog: React.FC<EmployeeDetailDialogProps> = ({
               <FormControl size="small" fullWidth>
                 <InputLabel>Department</InputLabel>
                 <Select value={form.department} label="Department" onChange={(e) => setForm({ ...form, department: e.target.value })}>
-                  {DEPARTMENTS.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
+                  {departments.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
                 </Select>
               </FormControl>
               <FormControl size="small" fullWidth>
                 <InputLabel>Location</InputLabel>
                 <Select value={form.location} label="Location" onChange={(e) => setForm({ ...form, location: e.target.value })}>
-                  {LOCATIONS.map((l) => <MenuItem key={l} value={l}>{l}</MenuItem>)}
+                  {locations.map((l) => <MenuItem key={l} value={l}>{l}</MenuItem>)}
                 </Select>
               </FormControl>
             </Box>

@@ -13,6 +13,7 @@ export const API_ENDPOINTS = {
   },
   EMPLOYEES: {
     BASE: '/employees',
+    LOCATIONS: '/employees/locations',
     BY_ID: (id: string | number) => `/employees/${encodeURIComponent(String(id))}`,
   },
   DEPARTMENTS: {
@@ -24,4 +25,3 @@ export const API_ENDPOINTS = {
   },
   HEALTH: '/health',
 } as const;
-

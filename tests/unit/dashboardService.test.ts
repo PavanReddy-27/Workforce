@@ -34,7 +34,7 @@ describe('Dashboard Service & Transform Unit Tests', () => {
 
   it('should transform backend summary into the 5 required KPI cards', () => {
     const summary: BackendDashboardSummary = {
-      totalEmployees: 28,
+      totalEmployees: 30,
       presentToday: 26,
       absentToday: 1,
       onLeave: 1,
@@ -49,8 +49,8 @@ describe('Dashboard Service & Transform Unit Tests', () => {
     // 1. Total Employees
     expect(kpis[0].id).toBe('total_employees');
     expect(kpis[0].title).toBe('Total Employees');
-    expect(kpis[0].value).toBe('28');
-    expect(kpis[0].numericValue).toBe(28);
+    expect(kpis[0].value).toBe('30');
+    expect(kpis[0].numericValue).toBe(30);
     expect(kpis[0].change).toBeUndefined(); // No fake comparison percentage
 
     // 2. Present Today
@@ -91,13 +91,11 @@ describe('Dashboard Service & Transform Unit Tests', () => {
     expect(kpis[3].numericValue).toBe(0);
   });
 
-  it('should transform attendance trends preserving inOffice and remote breakdown', () => {
+  it('should transform attendance trends preserving recorded attendance statuses', () => {
     const rawTrends: BackendAttendanceTrendItem[] = [
       {
         date: '2026-10-29',
         present: 27,
-        inOffice: 22,
-        remote: 5,
         absent: 1,
         onLeave: 0,
         totalRecorded: 28,
@@ -106,8 +104,6 @@ describe('Dashboard Service & Transform Unit Tests', () => {
       {
         date: '2026-10-30',
         present: 26,
-        inOffice: 21,
-        remote: 5,
         absent: 1,
         onLeave: 1,
         totalRecorded: 28,
@@ -118,8 +114,8 @@ describe('Dashboard Service & Transform Unit Tests', () => {
     const chartPoints = transformAttendanceTrends(rawTrends);
     expect(chartPoints.length).toBe(2);
     expect(chartPoints[0].date).toBe('2026-10-29');
-    expect(chartPoints[0].inOffice).toBe(22);
-    expect(chartPoints[0].remote).toBe(5);
+    expect(chartPoints[0].present).toBe(27);
+    expect(chartPoints[0].absent).toBe(1);
     expect(chartPoints[0].onLeave).toBe(0);
     expect(chartPoints[0].attendanceRate).toBe(96.4);
   });
@@ -127,22 +123,22 @@ describe('Dashboard Service & Transform Unit Tests', () => {
   it('should transform workforce distribution into department and status models', () => {
     const rawDist: BackendWorkforceDistribution = {
       byDepartment: [
-        { departmentId: 1, departmentName: 'Engineering', headcount: 9, percentage: 31.0 },
-        { departmentId: 2, departmentName: 'Product & Design', headcount: 5, percentage: 17.2 },
+        { departmentId: 1, departmentName: 'Engineering', headcount: 10, percentage: 33.3 },
+        { departmentId: 2, departmentName: 'Product & Design', headcount: 5, percentage: 16.7 },
       ],
       byStatus: [
         { status: 'Active', count: 28, percentage: 93.3 },
         { status: 'On Leave', count: 1, percentage: 3.3 },
         { status: 'Terminated', count: 1, percentage: 3.3 },
       ],
-      totalEmployees: 29,
+      totalEmployees: 30,
     };
 
     const { departmentChartData, workforceDonutSegments } = transformDistribution(rawDist);
 
     expect(departmentChartData.length).toBe(2);
     expect(departmentChartData[0].name).toBe('Engineering');
-    expect(departmentChartData[0].headcount).toBe(9);
+    expect(departmentChartData[0].headcount).toBe(10);
     expect(departmentChartData[0].color).toBe('#2563EB');
 
     expect(workforceDonutSegments.length).toBe(3);
@@ -150,5 +146,8 @@ describe('Dashboard Service & Transform Unit Tests', () => {
     expect(workforceDonutSegments[0].value).toBe(28);
     expect(workforceDonutSegments[0].percentage).toBe(93.3);
     expect(workforceDonutSegments[0].color).toBe('#10B981');
+    expect(workforceDonutSegments.reduce((total, segment) => total + segment.value, 0)).toBe(
+      rawDist.totalEmployees
+    );
   });
 });

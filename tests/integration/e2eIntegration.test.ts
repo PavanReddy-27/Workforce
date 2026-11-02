@@ -36,7 +36,7 @@ describe('Live End-to-End Frontend-Backend Integration Tests', () => {
     expect(engRes.data.filtersApplied.department).toBe('Engineering');
   });
 
-  it('should fetch real date-grouped attendance trends with inOffice and remote breakdown', async () => {
+  it('should fetch real date-grouped attendance trends by attendance status', async () => {
     const trendRes = await dashboardService.getAttendanceTrends({
       department: 'All Departments',
       location: 'All Locations',
@@ -52,8 +52,8 @@ describe('Live End-to-End Frontend-Backend Integration Tests', () => {
     const firstPoint = trendRes.data[0];
     expect(firstPoint.date).toBeDefined();
     expect(firstPoint.present).toBeGreaterThan(0);
-    expect(firstPoint.inOffice).toBeGreaterThan(0);
-    expect(firstPoint.remote).toBeGreaterThanOrEqual(0);
+    expect(firstPoint.absent).toBeGreaterThanOrEqual(0);
+    expect(firstPoint.onLeave).toBeGreaterThanOrEqual(0);
     expect(firstPoint.totalRecorded).toBe(firstPoint.present + firstPoint.absent + firstPoint.onLeave);
   });
 

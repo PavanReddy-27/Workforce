@@ -11,6 +11,8 @@ export interface AttendanceTrendQueryOptions {
   timeRange?: '7d' | '30d' | '90d' | '1y';
   department?: string;
   location?: string;
+  status?: string;
+  search?: string;
 }
 
 export class DashboardService {
@@ -20,6 +22,8 @@ export class DashboardService {
     date?: string;
     department?: string;
     location?: string;
+    status?: string;
+    search?: string;
   }): DashboardSummaryKpis {
     return this.dashboardRepo.getSummaryKpis(options);
   }
@@ -44,10 +48,17 @@ export class DashboardService {
       endDate: effectiveEndDate,
       department: options.department,
       location: options.location,
+      status: options.status,
+      search: options.search,
     });
   }
 
-  public getWorkforceDistribution(): WorkforceDistribution {
-    return this.dashboardRepo.getWorkforceDistribution();
+  public getWorkforceDistribution(options: {
+    department?: string;
+    location?: string;
+    status?: string;
+    search?: string;
+  } = {}): WorkforceDistribution {
+    return this.dashboardRepo.getWorkforceDistribution(options);
   }
 }

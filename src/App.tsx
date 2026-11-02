@@ -40,32 +40,10 @@ import { EmployeeTable } from './features/employees';
 import { AttendancePage } from './features/attendance/AttendancePage';
 import { DepartmentsPage } from './features/departments/DepartmentsPage';
 import { employeeService } from './services/employees.service';
+import { departmentService } from './services/departments.service';
 import type { FilterState } from './types';
 import { useDashboardData } from './hooks';
 import { exportToCsv } from './utils';
-
-const AVAILABLE_DEPARTMENTS = [
-  'Engineering',
-  'Product & Design',
-  'Sales & Marketing',
-  'Customer Success',
-  'Human Resources',
-  'Finance & Legal',
-];
-
-const AVAILABLE_LOCATIONS = [
-  'San Francisco HQ',
-  'London Tech Hub',
-  'Singapore Office',
-  'Remote Global',
-];
-
-const AVAILABLE_CONTRACT_TYPES = [
-  'Full-Time',
-  'Part-Time',
-  'Contractor',
-  'Intern',
-];
 
 /** Persist and retrieve the user's color mode preference */
 function getInitialMode(): 'light' | 'dark' {
@@ -97,9 +75,6 @@ export const App: React.FC = () => {
     searchQuery: '',
   });
 
-  // State simulator for verifying loading, empty, and error states
-  const [viewState, setViewState] = useState<'normal' | 'loading' | 'empty' | 'error'>('normal');
-
   // Dialog & Notification feedback states
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error' | 'info' | 'warning'>('success');
@@ -108,10 +83,10 @@ export const App: React.FC = () => {
   const [newHireForm, setNewHireForm] = useState({
     name: '',
     role: '',
-    department: 'Engineering',
-    location: 'San Francisco HQ',
-    type: 'Full-Time',
+    department: '',
+    location: '',
   });
+  const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
 
   // Persist color mode
   useEffect(() => {
@@ -122,6 +97,37 @@ export const App: React.FC = () => {
     }
   }, [mode]);
 
+  useEffect(() => {
+    let active = true;
+    departmentService
+      .getDepartments()
+      .then((res) => {
+        if (!res.success || !Array.isArray(res.data)) {
+          throw new Error(res.message || 'Unable to load departments.');
+        }
+        if (active) {
+          const names = res.data.map((department) => department.name);
+          setAvailableDepartments(names);
+          setNewHireForm((prev) => ({
+            ...prev,
+            department: names.includes(prev.department) ? prev.department : names[0] ?? '',
+          }));
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setSnackbarSeverity('error');
+          setSnackbarMessage(
+            err instanceof Error ? `Unable to load departments: ${err.message}` : 'Unable to load departments.'
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // Synchronized computation of all data series based on the 4 active filters
   const {
     totalHeadcount,
@@ -130,6 +136,7 @@ export const App: React.FC = () => {
     departmentChartData,
     workforceDonutSegments,
     filteredActivities,
+    matchingHeadcount,
     loading,
     error,
     partialErrors,
@@ -194,7 +201,6 @@ export const App: React.FC = () => {
       employmentType: 'All Types',
       searchQuery: '',
     });
-    setViewState('normal');
   };
 
   const handleNewHireSubmit = async (e: React.FormEvent) => {
@@ -238,9 +244,8 @@ export const App: React.FC = () => {
     setNewHireForm({
       name: '',
       role: '',
-      department: 'Engineering',
-      location: 'San Francisco HQ',
-      type: 'Full-Time',
+      department: availableDepartments[0] ?? '',
+      location: '',
     });
   };
 
@@ -259,11 +264,9 @@ export const App: React.FC = () => {
         return (
           <PlaceholderPage
             title="Recruitment Pipeline"
-            description="Track open headcount requisitions, manage candidate pipelines, and streamline your hiring workflow across all departments."
+            description="Recruitment management is outside the scope of the current Workforce Analytics release."
             icon={<WorkOutlineOutlinedIcon />}
             color="#F59E0B"
-            features={['Job Requisitions', 'Candidate Tracking', 'Interview Scheduling', 'Offer Management', 'Onboarding Pipeline']}
-            completionPercent={72}
           />
         );
 
@@ -271,11 +274,9 @@ export const App: React.FC = () => {
         return (
           <PlaceholderPage
             title="Performance Analytics"
-            description="Monitor employee performance reviews, goal tracking, and organizational development metrics across all teams."
+            description="Performance reviews and goal tracking are outside the scope of the current Workforce Analytics release."
             icon={<AssessmentOutlinedIcon />}
             color="#10B981"
-            features={['Performance Reviews', 'OKR Tracking', 'eNPS Scores', '360° Feedback', 'Growth Plans']}
-            completionPercent={45}
           />
         );
 
@@ -283,11 +284,9 @@ export const App: React.FC = () => {
         return (
           <PlaceholderPage
             title="Payroll & Compensation"
-            description="Manage payroll runs, compensation bands, benefits administration, and total rewards data in one place."
+            description="Payroll and compensation management are outside the scope of the current Workforce Analytics release."
             icon={<AccountBalanceWalletOutlinedIcon />}
             color="#8B5CF6"
-            features={['Payroll Runs', 'Compensation Bands', 'Benefits Admin', 'Tax Compliance', 'Expense Reports']}
-            completionPercent={28}
           />
         );
 
@@ -295,11 +294,9 @@ export const App: React.FC = () => {
         return (
           <PlaceholderPage
             title="Platform Settings"
-            description="Configure system preferences, manage user roles and permissions, set up integrations, and customize the platform to your organization's needs."
+            description="Account, integration, and platform settings are outside the scope of the current Workforce Analytics release."
             icon={<SettingsOutlinedIcon />}
             color="#64748B"
-            features={['User Roles & Permissions', 'SSO Integration', 'API Keys', 'Audit Logs', 'Notification Settings']}
-            completionPercent={55}
           />
         );
 
@@ -310,15 +307,15 @@ export const App: React.FC = () => {
             <DashboardFilters
               filters={filters}
               onFilterChange={setFilters}
-              filteredHeadcount={totalHeadcount}
+              filteredHeadcount={matchingHeadcount}
             />
 
             {/* Conditional States Rendering */}
-            {viewState === 'loading' || (loading && kpis.length === 0) ? (
+            {loading && kpis.length === 0 ? (
               <LoadingSkeleton />
-            ) : viewState === 'error' || error ? (
-              <ErrorState onRetry={() => { setViewState('normal'); refetch(); }} />
-            ) : (viewState === 'empty' || totalHeadcount === 0) && !loading ? (
+            ) : error ? (
+              <ErrorState onRetry={refetch} />
+            ) : totalHeadcount === 0 && !loading ? (
               <EmptyState onResetFilters={handleResetAllFilters} />
             ) : (
               <>
@@ -357,10 +354,7 @@ export const App: React.FC = () => {
                   }}
                 >
                   <AttendanceTrendChart data={trendPoints} timeRange={filters.timeRange} />
-                  <WorkforceDonutChart
-                    segments={workforceDonutSegments}
-                    totalHeadcount={totalHeadcount}
-                  />
+                  <WorkforceDonutChart segments={workforceDonutSegments} />
                 </Box>
 
                 {/* Row 2: Department Distribution Chart + Recent Employee Activity */}
@@ -464,8 +458,6 @@ export const App: React.FC = () => {
             onSearchChange={(q) => setFilters((prev) => ({ ...prev, searchQuery: q }))}
             onExportClick={handleExport}
             onAddEmployeeClick={() => setNewHireDialogOpen(true)}
-            viewState={viewState}
-            onViewStateChange={setViewState}
           />
 
           {/* Dashboard Body */}
@@ -571,14 +563,14 @@ export const App: React.FC = () => {
             />
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-              <FormControl fullWidth size="small">
+              <FormControl fullWidth size="small" required>
                 <InputLabel>Department</InputLabel>
                 <Select
                   value={newHireForm.department}
                   label="Department"
                   onChange={(e) => setNewHireForm({ ...newHireForm, department: e.target.value })}
                 >
-                  {AVAILABLE_DEPARTMENTS.map((d) => (
+                  {availableDepartments.map((d) => (
                     <MenuItem key={d} value={d}>
                       {d}
                     </MenuItem>
@@ -586,36 +578,15 @@ export const App: React.FC = () => {
                 </Select>
               </FormControl>
 
-              <FormControl fullWidth size="small">
-                <InputLabel>Location Hub</InputLabel>
-                <Select
-                  value={newHireForm.location}
-                  label="Location Hub"
-                  onChange={(e) => setNewHireForm({ ...newHireForm, location: e.target.value })}
-                >
-                  {AVAILABLE_LOCATIONS.map((l) => (
-                    <MenuItem key={l} value={l}>
-                      {l}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <TextField
+                label="Location"
+                required
+                fullWidth
+                size="small"
+                value={newHireForm.location}
+                onChange={(e) => setNewHireForm({ ...newHireForm, location: e.target.value })}
+              />
             </Box>
-
-            <FormControl fullWidth size="small">
-              <InputLabel>Employment Contract</InputLabel>
-              <Select
-                value={newHireForm.type}
-                label="Employment Contract"
-                onChange={(e) => setNewHireForm({ ...newHireForm, type: e.target.value })}
-              >
-                {AVAILABLE_CONTRACT_TYPES.map((t) => (
-                  <MenuItem key={t} value={t}>
-                    {t}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
           </DialogContent>
 
           <DialogActions sx={{ px: 3, pb: 2 }}>

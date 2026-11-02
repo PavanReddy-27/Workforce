@@ -27,6 +27,7 @@ import { employeeService } from '../services/employees.service';
 
 export interface UseDashboardDataResult {
   totalHeadcount: number;
+  matchingHeadcount: number;
   kpis: KpiMetric[];
   trendPoints: AttendanceDataPoint[];
   departmentChartData: DepartmentMetric[];
@@ -45,6 +46,7 @@ export interface UseDashboardDataResult {
 
 export function useDashboardData(filters: FilterState): UseDashboardDataResult {
   const [totalHeadcount, setTotalHeadcount] = useState<number>(0);
+  const [matchingHeadcount, setMatchingHeadcount] = useState<number>(0);
   const [kpis, setKpis] = useState<KpiMetric[]>([]);
   const [trendPoints, setTrendPoints] = useState<AttendanceDataPoint[]>([]);
   const [departmentChartData, setDepartmentChartData] = useState<DepartmentMetric[]>([]);
@@ -80,6 +82,7 @@ export function useDashboardData(filters: FilterState): UseDashboardDataResult {
     setLoading(true);
     setError(null);
     setPartialErrors({});
+    setMatchingHeadcount(0);
 
     async function fetchAllDashboardData() {
       const pErrors: {
@@ -123,7 +126,7 @@ export function useDashboardData(filters: FilterState): UseDashboardDataResult {
 
       // 3. Fetch Workforce Distribution (by department and by employment status)
       try {
-        const distRes = await dashboardService.getWorkforceDistribution({ signal });
+        const distRes = await dashboardService.getWorkforceDistribution(filters, { signal });
         if (distRes.success && distRes.data) {
           const { departmentChartData: deptData, workforceDonutSegments: donutData } =
             transformDistribution(distRes.data);
@@ -146,39 +149,24 @@ export function useDashboardData(filters: FilterState): UseDashboardDataResult {
             sortOrder: 'desc',
             department: filters.department,
             location: filters.location,
+            status: filters.employmentType !== 'All Types' ? filters.employmentType : undefined,
+            search: filters.searchQuery || undefined,
           },
           { signal }
         );
 
         if (recentEmpRes.success && recentEmpRes.data) {
-          const activities: ActivityItem[] = recentEmpRes.data.map((emp, i) => {
-            const isLeave = emp.employment_status === 'On Leave';
-            const isPromo =
-              !isLeave &&
-              (i % 3 === 1 ||
-                emp.job_title.toLowerCase().includes('lead') ||
-                emp.job_title.toLowerCase().includes('director'));
-            const type = isLeave ? ('leave' as const) : isPromo ? ('promotion' as const) : ('hire' as const);
-
-            let description = `Joined ${emp.department_name} as ${emp.job_title} at ${emp.location}`;
-            if (isLeave) {
-              description = `On approved leave (${emp.department_name} • ${emp.location})`;
-            } else if (isPromo) {
-              description = `Advanced to ${emp.job_title} within ${emp.department_name}`;
-            }
-
+          setMatchingHeadcount(recentEmpRes.pagination.totalRecords);
+          const activities: ActivityItem[] = recentEmpRes.data.map((emp) => {
             return {
-              id: `act-${emp.id}-${type}`,
+              id: `hire-${emp.id}`,
               employeeName: `${emp.first_name} ${emp.last_name}`,
               role: emp.job_title,
               department: emp.department_name,
               location: emp.location,
-              employmentType: 'Full-Time',
-              description,
-              timeAgo: emp.hire_date || 'Recently',
-              status: 'completed' as const,
-              timestamp: emp.hire_date || 'Recently',
-              type,
+              description: `Joined ${emp.department_name} at ${emp.location}`,
+              hireDate: emp.hire_date,
+              type: 'hire' as const,
             };
           });
           setFilteredActivities(activities);
@@ -213,6 +201,7 @@ export function useDashboardData(filters: FilterState): UseDashboardDataResult {
 
   return {
     totalHeadcount,
+    matchingHeadcount,
     kpis,
     trendPoints,
     departmentChartData,

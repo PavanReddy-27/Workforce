@@ -47,21 +47,12 @@ import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { attendanceService } from '../../services/attendance.service';
 import { employeeService } from '../../services/employees.service';
+import { departmentService } from '../../services/departments.service';
 import type { AttendanceWithEmployee, BackendEmployee } from '../../types';
 import { EmployeeDetailDialog } from '../employees/EmployeeDetailDialog';
 import { exportToCsv } from '../../utils';
 
 const STATUS_OPTIONS = ['All Statuses', 'Present', 'Absent', 'On Leave'];
-
-const DEPARTMENT_OPTIONS = [
-  'All Departments',
-  'Engineering',
-  'Product & Design',
-  'Sales & Marketing',
-  'Customer Success',
-  'Human Resources',
-  'Finance & Legal',
-];
 
 function getDefaultDateRange() {
   const end = new Date();
@@ -93,6 +84,8 @@ export const AttendancePage: React.FC = () => {
   const [endDate, setEndDate] = useState(defaults.endDate);
   const [status, setStatus] = useState('All Statuses');
   const [department, setDepartment] = useState('All Departments');
+  const [departmentOptions, setDepartmentOptions] = useState(['All Departments']);
+  const [departmentOptionsError, setDepartmentOptionsError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -103,6 +96,31 @@ export const AttendancePage: React.FC = () => {
 
   // Summary stats from records
   const [summary, setSummary] = useState({ present: 0, absent: 0, onLeave: 0, total: 0, rate: 0 });
+
+  useEffect(() => {
+    let active = true;
+    departmentService
+      .getDepartments()
+      .then((res) => {
+        if (!res.success || !Array.isArray(res.data)) {
+          throw new Error(res.message || 'Unable to load departments.');
+        }
+        if (active) {
+          setDepartmentOptions(['All Departments', ...res.data.map((item) => item.name)]);
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setDepartmentOptionsError(
+            err instanceof Error ? err.message : 'Unable to load attendance department filters.'
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const fetchRecords = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort();
@@ -247,6 +265,12 @@ export const AttendancePage: React.FC = () => {
         </Typography>
       </Box>
 
+      {departmentOptionsError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          Unable to load department filters: {departmentOptionsError}
+        </Alert>
+      )}
+
       {/* Summary Cards */}
       <Grid container spacing={2} sx={{ mb: 2.5 }}>
         {summaryCards.map((card) => (
@@ -308,7 +332,7 @@ export const AttendancePage: React.FC = () => {
             <FormControl size="small" sx={{ width: 180 }}>
               <InputLabel>Department</InputLabel>
               <Select value={department} label="Department" onChange={(e) => { setDepartment(e.target.value); setPage(0); }}>
-                {DEPARTMENT_OPTIONS.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
+                {departmentOptions.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
               </Select>
             </FormControl>
             <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>

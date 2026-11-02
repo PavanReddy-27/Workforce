@@ -52,10 +52,6 @@ const CustomChartTooltip: React.FC<CustomTooltipProps> = ({
 }) => {
   if (active && payload && payload.length) {
     const rawPoint = payload[0].payload;
-    const totalPresent = rawPoint.inOffice + rawPoint.remote;
-    const inOfficeShare = totalPresent > 0 ? ((rawPoint.inOffice / totalPresent) * 100).toFixed(1) : '0.0';
-    const remoteShare = totalPresent > 0 ? ((rawPoint.remote / totalPresent) * 100).toFixed(1) : '0.0';
-
     return (
       <Box
         sx={{
@@ -70,7 +66,7 @@ const CustomChartTooltip: React.FC<CustomTooltipProps> = ({
         }}
       >
         <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.8125rem' }}>
-          {label} — Workforce Presence
+          Attendance on {label}
         </Typography>
 
         {isRateView ? (
@@ -88,29 +84,23 @@ const CustomChartTooltip: React.FC<CustomTooltipProps> = ({
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#2563EB' }} />
                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                  In-Office:
+                  Present:
                 </Typography>
               </Box>
               <Typography variant="caption" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                {rawPoint.inOffice.toLocaleString()}{' '}
-                <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: '0.6875rem' }}>
-                  ({inOfficeShare}%)
-                </Box>
+                {rawPoint.present.toLocaleString()}
               </Typography>
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: '2px', backgroundColor: '#0284C7' }} />
+                <Box sx={{ width: 8, height: 8, borderRadius: '2px', backgroundColor: '#EF4444' }} />
                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                  Remote:
+                  Absent:
                 </Typography>
               </Box>
               <Typography variant="caption" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                {rawPoint.remote.toLocaleString()}{' '}
-                <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: '0.6875rem' }}>
-                  ({remoteShare}%)
-                </Box>
+                {rawPoint.absent.toLocaleString()}
               </Typography>
             </Box>
 
@@ -118,7 +108,7 @@ const CustomChartTooltip: React.FC<CustomTooltipProps> = ({
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                 <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#D97706' }} />
                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-                  Approved Leave:
+                  On Leave:
                 </Typography>
               </Box>
               <Typography variant="caption" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
@@ -130,10 +120,10 @@ const CustomChartTooltip: React.FC<CustomTooltipProps> = ({
 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
               <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.primary' }}>
-                Total Present Today:
+                Attendance Rate:
               </Typography>
               <Typography variant="caption" sx={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: '#2563EB' }}>
-                {totalPresent.toLocaleString()} ({rawPoint.attendanceRate}%)
+                {rawPoint.attendanceRate}%
               </Typography>
             </Box>
           </Box>
@@ -150,8 +140,8 @@ export const AttendanceTrendChart: React.FC<AttendanceTrendChartProps> = ({ data
   const [viewType, setViewType] = useState<'breakdown' | 'rate'>('breakdown');
 
   // Compute summary metrics across data cycle
-  const totalInOffice = data.reduce((acc, curr) => acc + curr.inOffice, 0);
-  const totalRemote = data.reduce((acc, curr) => acc + curr.remote, 0);
+  const totalPresent = data.reduce((acc, curr) => acc + curr.present, 0);
+  const totalAbsent = data.reduce((acc, curr) => acc + curr.absent, 0);
   const avgRate = (
     data.reduce((acc, curr) => acc + curr.attendanceRate, 0) / (data.length || 1)
   ).toFixed(1);
@@ -187,11 +177,11 @@ export const AttendanceTrendChart: React.FC<AttendanceTrendChartProps> = ({ data
                 <ShowChartIcon sx={{ fontSize: 17 }} />
               </Box>
               <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '0.9375rem' }}>
-                Attendance Trend & Work Mode
+                Attendance Trend
               </Typography>
             </Box>
             <Typography variant="caption" sx={{ color: theme.palette.text.secondary, mt: 0.25, display: 'block' }}>
-              Presence velocity: In-office vs. remote vs. approved leave across {timeRange.toUpperCase()}
+              Recorded attendance by status across {timeRange.toUpperCase()}
             </Typography>
           </Box>
 
@@ -259,13 +249,13 @@ export const AttendanceTrendChart: React.FC<AttendanceTrendChartProps> = ({ data
               >
                 <defs>
                   {/* Restrained, non-muddy fills */}
-                  <linearGradient id="colorInOffice" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#2563EB" stopOpacity={0.18} />
                     <stop offset="95%" stopColor="#2563EB" stopOpacity={0.01} />
                   </linearGradient>
-                  <linearGradient id="colorRemote" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0284C7" stopOpacity={0.12} />
-                    <stop offset="95%" stopColor="#0284C7" stopOpacity={0.01} />
+                  <linearGradient id="colorAbsent" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.12} />
+                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0.01} />
                   </linearGradient>
                   <linearGradient id="colorLeave" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#D97706" stopOpacity={0.09} />
@@ -301,29 +291,28 @@ export const AttendanceTrendChart: React.FC<AttendanceTrendChartProps> = ({ data
                 {/* Clear line weights & distinct stroke patterns */}
                 <Area
                   type="monotone"
-                  dataKey="inOffice"
-                  name="In-Office"
+                  dataKey="present"
+                  name="Present"
                   stroke="#2563EB"
                   strokeWidth={2.5}
                   fillOpacity={1}
-                  fill="url(#colorInOffice)"
+                  fill="url(#colorPresent)"
                   isAnimationActive={false}
                 />
                 <Area
                   type="monotone"
-                  dataKey="remote"
-                  name="Remote Active"
-                  stroke="#0284C7"
-                  strokeWidth={2.5}
-                  strokeDasharray="5 3"
+                  dataKey="absent"
+                  name="Absent"
+                  stroke="#EF4444"
+                  strokeWidth={2}
                   fillOpacity={1}
-                  fill="url(#colorRemote)"
+                  fill="url(#colorAbsent)"
                   isAnimationActive={false}
                 />
                 <Area
                   type="monotone"
                   dataKey="onLeave"
-                  name="Approved Leave"
+                  name="On Leave"
                   stroke="#D97706"
                   strokeWidth={2}
                   fillOpacity={1}
@@ -356,7 +345,7 @@ export const AttendanceTrendChart: React.FC<AttendanceTrendChartProps> = ({ data
                 />
                 <YAxis
                   width={45}
-                  domain={[80, 100]}
+                  domain={[0, 100]}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(val) => `${val}%`}
@@ -401,9 +390,9 @@ export const AttendanceTrendChart: React.FC<AttendanceTrendChartProps> = ({ data
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#2563EB' }} />
             <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
-              In-Office Cycle Total:{' '}
+              Present Cycle Total:{' '}
               <Box component="span" sx={{ color: theme.palette.text.primary, fontWeight: 600 }}>
-                {totalInOffice.toLocaleString()}
+                {totalPresent.toLocaleString()}
               </Box>
             </Typography>
           </Box>
@@ -411,9 +400,9 @@ export const AttendanceTrendChart: React.FC<AttendanceTrendChartProps> = ({ data
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             <Box sx={{ width: 8, height: 8, borderRadius: '2px', backgroundColor: '#0284C7' }} />
             <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
-              Remote Cycle Total:{' '}
+              Absent Cycle Total:{' '}
               <Box component="span" sx={{ color: theme.palette.text.primary, fontWeight: 600 }}>
-                {totalRemote.toLocaleString()}
+                {totalAbsent.toLocaleString()}
               </Box>
             </Typography>
           </Box>

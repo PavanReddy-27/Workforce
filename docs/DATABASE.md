@@ -24,9 +24,9 @@ erDiagram
     DEPARTMENTS {
         INTEGER id PK "AUTOINCREMENT"
         TEXT name UK "NOT NULL, Unique"
-        TEXT code UK "NOT NULL, Unique"
         TEXT description "Optional department overview"
         TEXT created_at "ISO-8601 Timestamp DEFAULT CURRENT_TIMESTAMP"
+        TEXT updated_at "ISO-8601 Timestamp DEFAULT CURRENT_TIMESTAMP"
     }
 
     EMPLOYEES {
@@ -41,6 +41,7 @@ erDiagram
         TEXT employment_status "NOT NULL CHECK IN (Active, On Leave, Terminated, Suspended)"
         TEXT hire_date "NOT NULL (YYYY-MM-DD)"
         TEXT created_at "ISO-8601 Timestamp DEFAULT CURRENT_TIMESTAMP"
+        TEXT updated_at "ISO-8601 Timestamp DEFAULT CURRENT_TIMESTAMP"
     }
 
     ATTENDANCE {
@@ -48,11 +49,10 @@ erDiagram
         INTEGER employee_id FK "NOT NULL REFERENCES employees(id)"
         TEXT attendance_date "NOT NULL (YYYY-MM-DD)"
         TEXT status "NOT NULL CHECK IN (Present, Absent, On Leave)"
-        TEXT work_mode "Optional CHECK IN (in_office, remote)"
         TEXT check_in_time "Optional ISO-8601 or HH:MM"
         TEXT check_out_time "Optional ISO-8601 or HH:MM"
-        TEXT notes "Optional notes"
         TEXT created_at "ISO-8601 Timestamp DEFAULT CURRENT_TIMESTAMP"
+        TEXT updated_at "ISO-8601 Timestamp DEFAULT CURRENT_TIMESTAMP"
     }
 ```
 
@@ -68,9 +68,9 @@ Stores the organizational business units.
 CREATE TABLE IF NOT EXISTS departments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
-    code TEXT NOT NULL UNIQUE,
     description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 ```
 
@@ -78,13 +78,13 @@ CREATE TABLE IF NOT EXISTS departments (
 |---|---|---|---|
 | `id` | `INTEGER` | `PRIMARY KEY AUTOINCREMENT` | Unique numeric identifier |
 | `name` | `TEXT` | `NOT NULL UNIQUE` | Human-readable name (e.g., "Engineering") |
-| `code` | `TEXT` | `NOT NULL UNIQUE` | Short mnemonic code (e.g., "ENG") |
 | `description` | `TEXT` | `NULL` | Department mission and mandate |
-| `created_at` | `DATETIME` | `DEFAULT CURRENT_TIMESTAMP` | Audit creation timestamp |
+| `created_at` | `TEXT` | `NOT NULL`, ISO-8601 default | Audit creation timestamp |
+| `updated_at` | `TEXT` | `NOT NULL`, ISO-8601 default | Last update timestamp |
 
 ### 3.2. `employees` Table
 
-Stores individual staff profiles, organizational placement, and contract status.
+Stores individual staff profiles, organizational placement, and employment status.
 
 ```sql
 CREATE TABLE IF NOT EXISTS employees (
@@ -96,11 +96,12 @@ CREATE TABLE IF NOT EXISTS employees (
     department_id INTEGER NOT NULL,
     location TEXT NOT NULL,
     job_title TEXT NOT NULL,
-    employment_status TEXT NOT NULL DEFAULT 'Active'
+    employment_status TEXT NOT NULL
         CHECK (employment_status IN ('Active', 'On Leave', 'Terminated', 'Suspended')),
-    hire_date DATE NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE RESTRICT
+    hire_date TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 ```
 
@@ -112,29 +113,29 @@ CREATE TABLE IF NOT EXISTS employees (
 | `last_name` | `TEXT` | `NOT NULL` | Employee family name |
 | `email` | `TEXT` | `NOT NULL UNIQUE` | Corporate email address |
 | `department_id` | `INTEGER` | `NOT NULL, FK -> departments(id)` | Foreign key referencing department |
-| `location` | `TEXT` | `NOT NULL` | Primary office site or remote tag |
+| `location` | `TEXT` | `NOT NULL` | Primary office location |
 | `job_title` | `TEXT` | `NOT NULL` | Role designation |
-| `employment_status`| `TEXT` | `CHECK In ('Active','On Leave','Terminated','Suspended')` | Employment contract standing |
-| `hire_date` | `DATE` | `NOT NULL (YYYY-MM-DD)` | Date joined the company |
-| `created_at` | `DATETIME` | `DEFAULT CURRENT_TIMESTAMP` | Audit creation timestamp |
+| `employment_status`| `TEXT` | `NOT NULL`, `CHECK In ('Active','On Leave','Terminated','Suspended')` | Current employment status |
+| `hire_date` | `TEXT` | `NOT NULL (YYYY-MM-DD)` | Date joined the company |
+| `created_at` | `TEXT` | `NOT NULL`, ISO-8601 default | Audit creation timestamp |
+| `updated_at` | `TEXT` | `NOT NULL`, ISO-8601 default | Last update timestamp |
 
 ### 3.3. `attendance` Table
 
-Stores daily presence records, work location modes, and leave logs.
+Stores daily attendance status and optional check-in/out times.
 
 ```sql
 CREATE TABLE IF NOT EXISTS attendance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     employee_id INTEGER NOT NULL,
-    attendance_date DATE NOT NULL,
+    attendance_date TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('Present', 'Absent', 'On Leave')),
-    work_mode TEXT CHECK (work_mode IN ('in_office', 'remote') OR work_mode IS NULL),
     check_in_time TEXT,
     check_out_time TEXT,
-    notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE,
-    UNIQUE (employee_id, attendance_date)
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT uq_employee_attendance_date UNIQUE (employee_id, attendance_date)
 );
 ```
 
@@ -144,11 +145,10 @@ CREATE TABLE IF NOT EXISTS attendance (
 | `employee_id` | `INTEGER` | `NOT NULL, FK -> employees(id)` | Foreign key referencing employee |
 | `attendance_date` | `DATE` | `NOT NULL (YYYY-MM-DD)` | Calendar date of attendance |
 | `status` | `TEXT` | `CHECK In ('Present','Absent','On Leave')` | Daily presence status |
-| `work_mode` | `TEXT` | `CHECK In ('in_office','remote')` | Physical vs. remote mode |
 | `check_in_time` | `TEXT` | `NULL` | Recorded check-in timestamp |
 | `check_out_time` | `TEXT` | `NULL` | Recorded check-out timestamp |
-| `notes` | `TEXT` | `NULL` | Manager or exception notes |
-| `created_at` | `DATETIME` | `DEFAULT CURRENT_TIMESTAMP` | Audit timestamp |
+| `created_at` | `TEXT` | `NOT NULL`, ISO-8601 default | Audit timestamp |
+| `updated_at` | `TEXT` | `NOT NULL`, ISO-8601 default | Last update timestamp |
 
 ---
 
@@ -158,20 +158,22 @@ To ensure queries remain sub-millisecond even as employee and attendance tables 
 
 ```sql
 -- Employee table search and filter indexes
-CREATE INDEX IF NOT EXISTS idx_employees_dept ON employees(department_id);
-CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(employment_status);
-CREATE INDEX IF NOT EXISTS idx_employees_loc ON employees(location);
+CREATE INDEX IF NOT EXISTS idx_employees_department_id ON employees(department_id);
+CREATE INDEX IF NOT EXISTS idx_employees_employment_status ON employees(employment_status);
+CREATE INDEX IF NOT EXISTS idx_employees_location ON employees(location);
 CREATE INDEX IF NOT EXISTS idx_employees_code ON employees(employee_code);
+CREATE INDEX IF NOT EXISTS idx_employees_names ON employees(last_name, first_name);
 
 -- Attendance aggregation indexes
-CREATE INDEX IF NOT EXISTS idx_attendance_emp_date ON attendance(employee_id, attendance_date);
+CREATE INDEX IF NOT EXISTS idx_attendance_employee_id ON attendance(employee_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(attendance_date);
 CREATE INDEX IF NOT EXISTS idx_attendance_status ON attendance(status);
+CREATE INDEX IF NOT EXISTS idx_attendance_date_status ON attendance(attendance_date, status);
 ```
 
 ### Query Execution Advantages
 1. **Dashboard Summary Query**: Filters by `attendance_date` and groups by status; uses `idx_attendance_date` and `idx_attendance_status` to scan only today's records without touching the full historical attendance table.
-2. **Attendance Trends Query**: Aggregates presence across date ranges; uses range scanning on `idx_attendance_date` paired with `work_mode`.
+2. **Attendance Trends Query**: Aggregates present, absent, and on-leave counts across date ranges using `idx_attendance_date`.
 3. **Employee Directory Table**: Performs multi-field filtering on `department_id`, `location`, and `employment_status` supported by composite index coverage.
 
 ---
@@ -181,7 +183,7 @@ CREATE INDEX IF NOT EXISTS idx_attendance_status ON attendance(status);
 The database seeder (`backend/src/database/seed.ts`) populates realistic enterprise test data:
 - **6 Departments**: Customer Success, Engineering, Finance & Legal, Human Resources, Product & Design, Sales & Marketing.
 - **30 Employees**: Diverse distribution across 4 locations (San Francisco HQ, London Tech Hub, Singapore Office, Remote Global) with Active, On Leave, and Terminated statuses.
-- **30 Days of Attendance**: Full historical records for every active employee, including realistic weekday in-office vs. remote distributions and approved leave dates.
+- **30 Days of Attendance**: Historical records for non-terminated employees, including present, absent, and on-leave status counts.
 
 ### Idempotency Guarantee
 The seeder runs inside an atomic transaction:

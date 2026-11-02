@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
+  Alert,
   Card,
   Box,
   FormControl,
@@ -17,6 +18,7 @@ import {
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import type { FilterState } from '../types';
 import { departmentService } from '../services/departments.service';
+import { employeeService } from '../services/employees.service';
 
 const TIME_RANGES: { value: '7d' | '30d' | '90d' | '1y'; label: string }[] = [
   { value: '7d', label: '7D' },
@@ -30,14 +32,7 @@ const EMPLOYMENT_STATUS_OPTIONS = [
   'Active',
   'On Leave',
   'Terminated',
-];
-
-const DEFAULT_LOCATIONS = [
-  'All Locations',
-  'San Francisco HQ',
-  'London Tech Hub',
-  'Singapore Office',
-  'Remote Global',
+  'Suspended',
 ];
 
 interface DashboardFiltersProps {
@@ -56,25 +51,30 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([
     'All Departments',
-    'Engineering',
-    'Product & Design',
-    'Sales & Marketing',
-    'Customer Success',
-    'Human Resources',
-    'Finance & Legal',
   ]);
+  const [locationOptions, setLocationOptions] = useState<string[]>(['All Locations']);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    departmentService
-      .getDepartments()
-      .then((res) => {
-        if (active && res.success && Array.isArray(res.data)) {
-          setDepartmentOptions(['All Departments', ...res.data.map((d) => d.name)]);
+    Promise.all([departmentService.getDepartments(), employeeService.getLocations()])
+      .then(([departments, locations]) => {
+        if (!departments.success || !Array.isArray(departments.data)) {
+          throw new Error(departments.message || 'Unable to load departments.');
+        }
+        if (!locations.success || !Array.isArray(locations.data)) {
+          throw new Error(locations.message || 'Unable to load office locations.');
+        }
+        if (active) {
+          setDepartmentOptions(['All Departments', ...departments.data.map((d) => d.name)]);
+          setLocationOptions(['All Locations', ...locations.data]);
+          setOptionsError(null);
         }
       })
-      .catch(() => {
-        // Fallback maintained
+      .catch((err: unknown) => {
+        if (active) {
+          setOptionsError(err instanceof Error ? err.message : 'Unable to load filter options.');
+        }
       });
 
     return () => {
@@ -147,6 +147,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           : '0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02)',
       }}
     >
+      {optionsError && <Alert severity="error" sx={{ mb: 1.5 }}>{optionsError}</Alert>}
       <Box
         sx={{
           display: 'flex',
@@ -214,7 +215,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               onChange={(e) => onFilterChange({ ...filters, location: e.target.value })}
               sx={selectSx}
             >
-              {DEFAULT_LOCATIONS.map((l) => (
+              {locationOptions.map((l) => (
                 <MenuItem key={l} value={l} sx={{ fontSize: '0.8125rem' }}>
                   {l}
                 </MenuItem>

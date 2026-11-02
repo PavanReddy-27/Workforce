@@ -47,8 +47,8 @@ Now open your web browser to: **`http://localhost:5173`**
 
 ### Step 2: The Five Primary KPI Cards (1 Minute)
 Examine the top row of metrics:
-- **Total Employees**: Displays total active staff (`28` active).
-- **Present Today**: Displays staff checked in today (`27`).
+- **Total Employees**: Displays all matching employee records, including terminated employees when no status filter is selected.
+- **Present Today**: Displays staff recorded present on the latest attendance date.
 - **Absent Today**: Staff marked absent (`1`).
 - **Attendance Rate**: Evaluated presence percentage (`96.4%`).
 - **On Leave**: Staff on approved leave (`0`).
@@ -56,20 +56,19 @@ Examine the top row of metrics:
 
 ### Step 3: Interactive Visualizations (2 Minutes)
 1. **Attendance Trend Chart**:
-   - Area chart showing daily staff distribution: In-Office (blue), Remote (sky blue), and Approved Leave (amber).
-   - Toggle the view button in the chart header from **Headcount** to **Rate %** to view percentage velocity over time.
+   - Area chart showing recorded Present (blue), Absent (red), and On Leave (amber) counts.
+   - Toggle the view button in the chart header from **Headcount** to **Rate %** to view attendance-rate trends.
 2. **Workforce Status Donut Chart**:
-   - Displays contract status: Full-Time, Contractor, Part-Time, and Intern.
-   - The donut center shows the total headcount.
+   - Displays employee counts across all employment statuses, including terminated employees.
+   - The donut center matches the total of its displayed status segments.
 3. **Department Distribution Chart**:
-   - Bar chart showing current staff count and open requisitions per business unit.
-   - Toggle view mode from **Headcount & Roles** to **Satisfaction** to see eNPS scores.
+   - Bar chart showing database-backed employee headcount by department.
    - **Interactive Filtering**: Click the **Engineering** bar. Notice that the entire dashboard instantly updates all KPIs and charts to isolate Engineering metrics! Click the chip to clear.
 
 ### Step 4: Multi-Dimensional Filter Bar (1 Minute)
 1. In the filter bar below the KPI cards, click the **Department** dropdown and select **Customer Success**.
 2. Notice the KPI cards update to reflect Customer Success metrics immediately.
-3. Click the **Reset Filters** button to return to the organizational baseline.
+3. Try Location, Employment Status, and date-range filters; click **Reset Filters** to return to the baseline.
 
 ### Step 5: Employee Directory Data Table (2 Minutes)
 Scroll down to the **Employee Directory** table:
@@ -78,8 +77,8 @@ Scroll down to the **Employee Directory** table:
    - Notice that after a 300ms debounce, the table displays Sarah Jenkins.
    - Click the `X` clear icon to restore all records.
 2. **Multi-Field Filters**:
-   - Select **Location** -> `"London Tech Hub"`.
-   - The table displays only employees based in London.
+   - Select **Location** -> `"London Tech Hub"` and **Employment Status** -> `"Active"`.
+   - The table and matching count use the selected filters.
 3. **Bidirectional Sorting**:
    - Click the **Last Name** column header to sort ascending, then click again to sort descending.
 4. **Server-Side Pagination**:
@@ -89,9 +88,9 @@ Scroll down to the **Employee Directory** table:
 1. In the topbar header, click the **+ Add Employee** button.
 2. Fill out the dialog:
    - Name: `Alexander Wright`
-   - Department: `Engineering`
+   - Department: choose a department loaded from the API
    - Role: `Senior Cloud Architect`
-   - Location: `San Francisco HQ`
+   - Location: enter a location
 3. Click **Initiate Onboarding**.
 4. Observe the confirmation snackbar, the employee table updating with Alexander Wright, and the KPI card total headcount incrementing!
 

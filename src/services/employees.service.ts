@@ -32,6 +32,7 @@ export interface IEmployeeService {
     params?: EmployeeFilterParams,
     options?: RequestOptions
   ): Promise<PaginatedResponse<BackendEmployee>>;
+  getLocations(options?: RequestOptions): Promise<ApiResponse<string[]>>;
   getEmployeeById(
     id: string | number,
     options?: RequestOptions
@@ -77,7 +78,22 @@ export class EmployeeApiService implements IEmployeeService {
       params: queryParams,
     });
 
-    return res as unknown as PaginatedResponse<BackendEmployee>;
+    const pagination = res.pagination;
+    if (
+      !pagination ||
+      !Number.isInteger(pagination.page) ||
+      !Number.isInteger(pagination.limit) ||
+      !Number.isInteger(pagination.totalRecords) ||
+      !Number.isInteger(pagination.totalPages)
+    ) {
+      throw new Error('Invalid employee API response: pagination metadata is missing or malformed.');
+    }
+
+    return { ...res, pagination };
+  }
+
+  async getLocations(options?: RequestOptions): Promise<ApiResponse<string[]>> {
+    return httpClient.get<string[]>(API_ENDPOINTS.EMPLOYEES.LOCATIONS, options);
   }
 
   async getEmployeeById(

@@ -85,12 +85,14 @@ Calculates the 5 primary KPI cards for the selected date and filters.
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |
 |---|---|:---:|---|---|
-| `date` | `string` | No | Today (`YYYY-MM-DD`) | Target evaluation date |
+| `date` | `string` | No | Latest attendance date (today if none) | Target evaluation date |
 | `department` | `string` | No | All | Filter by department name |
 | `location` | `string` | No | All | Filter by office location |
+| `status` | `string` | No | All statuses | `Active`, `On Leave`, `Terminated`, or `Suspended` |
+| `search` | `string` | No | - | Substring match against employee name, code, or email |
 
 **Business Calculation Rules**:
-- **Total Employees**: Count of active employees (`employment_status = 'Active'`).
+- **Total Employees**: Count of all employee records matching department, location, status, and search filters. Without a status filter, all employment statuses are included.
 - **Present Today**: Count of active employees whose status for the target date is `'Present'`.
 - **Absent Today**: Count of active employees whose status for the target date is `'Absent'`.
 - **On Leave**: Count of active employees whose status for the target date is `'On Leave'`.
@@ -102,16 +104,15 @@ Calculates the 5 primary KPI cards for the selected date and filters.
   "success": true,
   "data": {
     "date": "2026-10-30",
-    "totalEmployees": 28,
+    "totalEmployees": 30,
     "presentToday": 27,
     "absentToday": 1,
     "onLeave": 0,
     "attendanceRate": 96.4,
-    "inOffice": 19,
-    "remote": 8,
     "filtersApplied": {
       "department": null,
-      "location": null
+      "location": null,
+      "status": null
     }
   },
   "timestamp": "2026-10-30T12:00:00.000Z"
@@ -121,7 +122,7 @@ Calculates the 5 primary KPI cards for the selected date and filters.
 ---
 
 ### `GET /api/dashboard/attendance`
-Returns date-grouped historical attendance presence counts distinguishing in-office and remote workers.
+Returns date-grouped attendance status counts and attendance rates.
 
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |
@@ -130,6 +131,8 @@ Returns date-grouped historical attendance presence counts distinguishing in-off
 | `endDate` | `string` | No | Today | End of date range (`YYYY-MM-DD`) |
 | `department` | `string` | No | All | Filter by department name |
 | `location` | `string` | No | All | Filter by office location |
+| `status` | `string` | No | Active | `Active`, `On Leave`, `Terminated`, or `Suspended` |
+| `search` | `string` | No | - | Substring match against employee name, code, or email |
 
 **Response (HTTP 200)**:
 ```json
@@ -141,8 +144,6 @@ Returns date-grouped historical attendance presence counts distinguishing in-off
       "present": 26,
       "absent": 1,
       "onLeave": 1,
-      "inOffice": 18,
-      "remote": 8,
       "totalRecorded": 28,
       "attendanceRate": 92.9
     },
@@ -151,8 +152,6 @@ Returns date-grouped historical attendance presence counts distinguishing in-off
       "present": 27,
       "absent": 1,
       "onLeave": 0,
-      "inOffice": 19,
-      "remote": 8,
       "totalRecorded": 28,
       "attendanceRate": 96.4
     }
@@ -164,31 +163,32 @@ Returns date-grouped historical attendance presence counts distinguishing in-off
 ---
 
 ### `GET /api/dashboard/distribution`
-Returns organizational staff breakdowns by department and employment contract status.
+Returns SQLite-backed employee breakdowns by department and employment status across all employee records. Search and optional status filters use the same employee population as the summary and directory endpoints.
 
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |
 |---|---|:---:|---|---|
+| `department` | `string` | No | All | Filter by department name or ID |
 | `location` | `string` | No | All | Filter by office location |
+| `status` | `string` | No | All statuses | `Active`, `On Leave`, `Terminated`, or `Suspended` |
+| `search` | `string` | No | - | Substring match against employee name, code, or email |
 
 **Response (HTTP 200)**:
 ```json
 {
   "success": true,
   "data": {
-    "totalEmployees": 29,
+    "totalEmployees": 30,
     "byDepartment": [
       {
-        "id": 2,
-        "name": "Engineering",
-        "code": "ENG",
+        "departmentId": 2,
+        "departmentName": "Engineering",
         "headcount": 9,
         "percentage": 31.0
       },
       {
-        "id": 5,
-        "name": "Product & Design",
-        "code": "PRD",
+        "departmentId": 5,
+        "departmentName": "Product & Design",
         "headcount": 5,
         "percentage": 17.2
       }
@@ -234,12 +234,13 @@ Lists paginated employee records supporting server-side searching, multi-field f
       "email": "sarah.jenkins@stackly.internal",
       "department_id": 2,
       "department_name": "Engineering",
-      "department_code": "ENG",
+      "department_description": "Core software engineering, platform architecture, and cloud infrastructure",
       "location": "San Francisco HQ",
       "job_title": "Staff ML Infrastructure Engineer",
       "employment_status": "Active",
       "hire_date": "2022-03-15",
-      "created_at": "2026-10-30 06:00:00"
+      "created_at": "2026-10-30T06:00:00.000Z",
+      "updated_at": "2026-10-30T06:00:00.000Z"
     }
   ],
   "pagination": {
@@ -248,6 +249,20 @@ Lists paginated employee records supporting server-side searching, multi-field f
     "totalRecords": 30,
     "totalPages": 2
   },
+  "timestamp": "2026-10-30T12:00:00.000Z"
+}
+```
+
+---
+
+### `GET /api/employees/locations`
+Returns the distinct locations currently stored on employee records.
+
+**Response (HTTP 200)**:
+```json
+{
+  "success": true,
+  "data": ["London Tech Hub", "Remote Global", "San Francisco HQ", "Singapore Office"],
   "timestamp": "2026-10-30T12:00:00.000Z"
 }
 ```
@@ -272,12 +287,13 @@ Retrieves a single employee record by numeric ID or business employee code.
     "email": "sarah.jenkins@stackly.internal",
     "department_id": 2,
     "department_name": "Engineering",
-    "department_code": "ENG",
+    "department_description": "Core software engineering, platform architecture, and cloud infrastructure",
     "location": "San Francisco HQ",
     "job_title": "Staff ML Infrastructure Engineer",
     "employment_status": "Active",
     "hire_date": "2022-03-15",
-    "created_at": "2026-10-30 06:00:00"
+    "created_at": "2026-10-30T06:00:00.000Z",
+    "updated_at": "2026-10-30T06:00:00.000Z"
   },
   "timestamp": "2026-10-30T12:00:00.000Z"
 }
@@ -327,12 +343,13 @@ Creates a new employee record and persists it to the database.
     "email": "marcus.vance@stackly.internal",
     "department_id": 2,
     "department_name": "Engineering",
-    "department_code": "ENG",
+    "department_description": "Core software engineering, platform architecture, and cloud infrastructure",
     "location": "San Francisco HQ",
     "job_title": "Senior Reliability Engineer",
     "employment_status": "Active",
     "hire_date": "2026-10-30",
-    "created_at": "2026-10-30 12:00:00"
+    "created_at": "2026-10-30T12:00:00.000Z",
+    "updated_at": "2026-10-30T12:00:00.000Z"
   },
   "timestamp": "2026-10-30T12:00:00.000Z"
 }
@@ -426,16 +443,16 @@ Lists all active organizational departments.
     {
       "id": 1,
       "name": "Customer Success",
-      "code": "CS",
       "description": "Global customer satisfaction & enterprise support",
-      "created_at": "2026-10-30 06:00:00"
+      "created_at": "2026-10-30T06:00:00.000Z",
+      "updated_at": "2026-10-30T06:00:00.000Z"
     },
     {
       "id": 2,
       "name": "Engineering",
-      "code": "ENG",
       "description": "Platform architecture, product engineering, & infrastructure",
-      "created_at": "2026-10-30 06:00:00"
+      "created_at": "2026-10-30T06:00:00.000Z",
+      "updated_at": "2026-10-30T06:00:00.000Z"
     }
   ],
   "timestamp": "2026-10-30T12:00:00.000Z"
@@ -460,7 +477,6 @@ Retrieves paginated daily attendance records.
 | `startDate` | `string` | No | - | Range start date (`YYYY-MM-DD`) |
 | `endDate` | `string` | No | - | Range end date (`YYYY-MM-DD`) |
 | `status` | `string` | No | - | `Present`, `Absent`, `On Leave` |
-| `workMode` | `string` | No | - | `in_office`, `remote` |
 
 **Response (HTTP 200)**:
 ```json
@@ -476,11 +492,10 @@ Retrieves paginated daily attendance records.
       "department_name": "Engineering",
       "attendance_date": "2026-10-30",
       "status": "Present",
-      "work_mode": "in_office",
       "check_in_time": "08:45:00",
       "check_out_time": "17:30:00",
-      "notes": null,
-      "created_at": "2026-10-30 08:45:00"
+      "created_at": "2026-10-30T08:45:00.000Z",
+      "updated_at": "2026-10-30T08:45:00.000Z"
     }
   ],
   "pagination": {

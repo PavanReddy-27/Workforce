@@ -59,8 +59,10 @@ export function transformSummaryToKpis(summary: BackendDashboardSummary): KpiMet
       title: 'Total Employees',
       value: summary.totalEmployees.toLocaleString(),
       numericValue: summary.totalEmployees,
-      period: 'Active Headcount',
-      subtitle: 'Total active workforce enrolled',
+      period: 'All employee records',
+      subtitle: summary.filtersApplied.status
+        ? `${summary.filtersApplied.status} employees`
+        : 'Total workforce across all employment statuses',
       badgeColor: '#2563EB',
       iconName: 'people',
       isPositive: true,
@@ -82,7 +84,7 @@ export function transformSummaryToKpis(summary: BackendDashboardSummary): KpiMet
       value: summary.absentToday.toLocaleString(),
       numericValue: summary.absentToday,
       period: `Effective Date: ${summary.date}`,
-      subtitle: 'Unexcused / missing check-in',
+      subtitle: 'Staff recorded absent for the selected date',
       badgeColor: '#EF4444',
       iconName: 'cancel',
       isPositive: false,
@@ -104,7 +106,7 @@ export function transformSummaryToKpis(summary: BackendDashboardSummary): KpiMet
       value: summary.onLeave.toLocaleString(),
       numericValue: summary.onLeave,
       period: `Effective Date: ${summary.date}`,
-      subtitle: 'Approved PTO & medical leaves',
+      subtitle: 'Employees recorded on leave for the selected date',
       badgeColor: '#D97706',
       iconName: 'event_busy',
       isPositive: true,
@@ -117,13 +119,10 @@ export function transformAttendanceTrends(
 ): AttendanceDataPoint[] {
   return items.map((item) => ({
     date: item.date,
-    inOffice: item.inOffice ?? (item.present - (item.remote ?? 0)),
-    remote: item.remote ?? 0,
-    onLeave: item.onLeave,
-    totalPresent: item.present,
-    attendanceRate: item.attendanceRate,
     present: item.present,
     absent: item.absent,
+    onLeave: item.onLeave,
+    attendanceRate: item.attendanceRate,
     totalRecorded: item.totalRecorded,
   }));
 }
@@ -153,10 +152,6 @@ export function transformDistribution(
   const departmentChartData: DepartmentMetric[] = dist.byDepartment.map((item, idx) => ({
     name: item.departmentName,
     headcount: item.headcount,
-    openRoles: 0,
-    satisfaction: 85,
-    budget: 90,
-    diversity: 45,
     color: DEPT_COLORS[idx % DEPT_COLORS.length],
   }));
 
@@ -177,6 +172,7 @@ export interface IDashboardService {
     options?: RequestOptions
   ): Promise<ApiResponse<BackendAttendanceTrendItem[]>>;
   getWorkforceDistribution(
+    filters?: FilterState,
     options?: RequestOptions
   ): Promise<ApiResponse<BackendWorkforceDistribution>>;
 }
@@ -192,6 +188,12 @@ export class DashboardApiService implements IDashboardService {
     }
     if (filters.location && filters.location !== 'All Locations') {
       params.location = filters.location;
+    }
+    if (filters.employmentType && filters.employmentType !== 'All Types') {
+      params.status = filters.employmentType;
+    }
+    if (filters.searchQuery?.trim()) {
+      params.search = filters.searchQuery.trim();
     }
 
     return httpClient.get<BackendDashboardSummary>(API_ENDPOINTS.DASHBOARD.SUMMARY, {
@@ -216,6 +218,12 @@ export class DashboardApiService implements IDashboardService {
     if (filters.location && filters.location !== 'All Locations') {
       params.location = filters.location;
     }
+    if (filters.employmentType && filters.employmentType !== 'All Types') {
+      params.status = filters.employmentType;
+    }
+    if (filters.searchQuery?.trim()) {
+      params.search = filters.searchQuery.trim();
+    }
 
     return httpClient.get<BackendAttendanceTrendItem[]>(API_ENDPOINTS.DASHBOARD.ATTENDANCE, {
       ...options,
@@ -224,11 +232,28 @@ export class DashboardApiService implements IDashboardService {
   }
 
   async getWorkforceDistribution(
+    filters?: FilterState,
     options?: RequestOptions
   ): Promise<ApiResponse<BackendWorkforceDistribution>> {
+    const params: Record<string, string | undefined> = {};
+    if (filters?.department && filters.department !== 'All Departments') {
+      params.department = filters.department;
+    }
+    if (filters?.location && filters.location !== 'All Locations') {
+      params.location = filters.location;
+    }
+    if (filters?.employmentType && filters.employmentType !== 'All Types') {
+      params.status = filters.employmentType;
+    }
+    if (filters?.searchQuery?.trim()) {
+      params.search = filters.searchQuery.trim();
+    }
     return httpClient.get<BackendWorkforceDistribution>(
       API_ENDPOINTS.DASHBOARD.DISTRIBUTION,
-      options
+      {
+        ...options,
+        params: { ...params, ...options?.params },
+      }
     );
   }
 }

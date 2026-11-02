@@ -18,6 +18,15 @@ describe('Employees API Integration Tests', () => {
     db.close();
   });
 
+  it('GET /api/employees/locations returns distinct locations from SQLite', async () => {
+    const res = await request(app).get('/api/employees/locations');
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toContain('San Francisco HQ');
+    expect(new Set(res.body.data).size).toBe(res.body.data.length);
+  });
+
   it('GET /api/employees returns paginated employees with metadata', async () => {
     const res = await request(app).get('/api/employees');
 

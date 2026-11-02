@@ -183,6 +183,13 @@ export class EmployeeRepository {
     return (stmt.get() as { c: number }).c;
   }
 
+  public findLocations(): string[] {
+    const rows = this.db
+      .prepare('SELECT DISTINCT location FROM employees ORDER BY location COLLATE NOCASE')
+      .all() as { location: string }[];
+    return rows.map((row) => row.location);
+  }
+
   public create(data: {
     employee_code?: string;
     first_name: string;
@@ -375,4 +382,3 @@ export class EmployeeRepository {
     return true;
   }
 }
-

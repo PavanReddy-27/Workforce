@@ -14,6 +14,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Card,
   CardContent,
+  Alert,
   Box,
   Typography,
   TableContainer,
@@ -35,7 +36,6 @@ import {
   IconButton,
   Button,
   Skeleton,
-  Alert,
   Tooltip,
   useTheme,
   alpha,
@@ -135,23 +135,11 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   // Dynamic filter options
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([
     'All Departments',
-    'Engineering',
-    'Product & Design',
-    'Sales & Marketing',
-    'Customer Success',
-    'Human Resources',
-    'Finance & Legal',
   ]);
 
-  const locationOptions = [
-    'All Locations',
-    'San Francisco HQ',
-    'London Tech Hub',
-    'Singapore Office',
-    'Remote Global',
-  ];
-
-  const statusOptions = ['All Statuses', 'Active', 'On Leave', 'Terminated'];
+  const [locationOptions, setLocationOptions] = useState<string[]>(['All Locations']);
+  const [filterOptionsError, setFilterOptionsError] = useState<string | null>(null);
+  const statusOptions = ['All Statuses', 'Active', 'On Leave', 'Terminated', 'Suspended'];
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -162,14 +150,25 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   // Load departments dynamically from backend
   useEffect(() => {
     let mounted = true;
-    departmentService
-      .getDepartments()
-      .then((res) => {
-        if (mounted && res.success && Array.isArray(res.data)) {
-          setDepartmentOptions(['All Departments', ...res.data.map((d) => d.name)]);
+    Promise.all([departmentService.getDepartments(), employeeService.getLocations()])
+      .then(([departments, locations]) => {
+        if (!departments.success || !Array.isArray(departments.data)) {
+          throw new Error(departments.message || 'Unable to load departments.');
+        }
+        if (!locations.success || !Array.isArray(locations.data)) {
+          throw new Error(locations.message || 'Unable to load office locations.');
+        }
+        if (mounted) {
+          setDepartmentOptions(['All Departments', ...departments.data.map((d) => d.name)]);
+          setLocationOptions(['All Locations', ...locations.data]);
+          setFilterOptionsError(null);
         }
       })
-      .catch(() => {});
+      .catch((err: unknown) => {
+        if (mounted) {
+          setFilterOptionsError(err instanceof Error ? err.message : 'Unable to load filter options.');
+        }
+      });
     return () => {
       mounted = false;
     };
@@ -353,6 +352,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
       }}
     >
       <CardContent sx={{ p: { xs: 2, sm: 2.5 } }}>
+        {filterOptionsError && <Alert severity="error" sx={{ mb: 2 }}>{filterOptionsError}</Alert>}
         {/* Header & Controls */}
         <Box
           sx={{

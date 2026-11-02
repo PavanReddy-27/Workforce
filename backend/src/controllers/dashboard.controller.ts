@@ -4,6 +4,7 @@ import { sendSuccess } from '../utils/response';
 import type {
   GetDashboardSummaryQuery,
   GetDashboardAttendanceQuery,
+  GetDashboardDistributionQuery,
 } from '../schemas/dashboard.schema';
 
 export class DashboardController {
@@ -21,8 +22,9 @@ export class DashboardController {
     sendSuccess(res, trends);
   };
 
-  public getDistribution = (_req: Request, res: Response): void => {
-    const distribution = this.dashboardService.getWorkforceDistribution();
+  public getDistribution = (req: Request, res: Response): void => {
+    const query = req.query as unknown as GetDashboardDistributionQuery;
+    const distribution = this.dashboardService.getWorkforceDistribution(query);
     sendSuccess(res, distribution);
   };
 }

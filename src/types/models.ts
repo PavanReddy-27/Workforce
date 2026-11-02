@@ -54,16 +54,13 @@ export interface AttendanceRecord {
 
 export interface ActivityItem {
   id: string;
-  type: 'hire' | 'promotion' | 'leave' | 'transfer' | 'anniversary';
+  type: 'hire';
   employeeName: string;
   role: string;
   department: string;
   location: string;
-  employmentType: string;
   description: string;
-  timeAgo: string;
-  status: 'completed' | 'pending' | 'approved';
-  timestamp?: string;
+  hireDate: string;
 }
 
 /** Backend-shaped attendance record with embedded employee data */

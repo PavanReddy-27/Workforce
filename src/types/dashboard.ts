@@ -30,23 +30,16 @@ export interface KpiMetric {
 
 export interface AttendanceDataPoint {
   date: string;
-  inOffice: number;
-  remote: number;
+  present: number;
+  absent: number;
   onLeave: number;
-  totalPresent: number;
   attendanceRate: number; // percentage (0–100)
-  present?: number;
-  absent?: number;
   totalRecorded?: number;
 }
 
 export interface DepartmentMetric {
   name: string;
   headcount: number;
-  openRoles: number;
-  satisfaction: number; // 0 - 100
-  budget: number; // % utilized
-  diversity: number; // % female/non-binary
   color: string;
 }
 

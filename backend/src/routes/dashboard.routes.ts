@@ -4,6 +4,7 @@ import { validateRequest } from '../middleware/validateRequest';
 import {
   getDashboardSummaryQuerySchema,
   getDashboardAttendanceQuerySchema,
+  getDashboardDistributionQuerySchema,
 } from '../schemas/dashboard.schema';
 
 const router = Router();
@@ -21,6 +22,10 @@ router.get(
   controller.getAttendance
 );
 
-router.get('/distribution', controller.getDistribution);
+router.get(
+  '/distribution',
+  validateRequest({ query: getDashboardDistributionQuerySchema }),
+  controller.getDistribution
+);
 
 export const dashboardRoutes = router;

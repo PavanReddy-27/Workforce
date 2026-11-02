@@ -9,6 +9,8 @@ export const getDashboardSummaryQuerySchema = z.object({
   date: isoDateSchema.optional(),
   department: z.string().optional(),
   location: z.string().optional(),
+  status: z.enum(['Active', 'On Leave', 'Terminated', 'Suspended']).optional(),
+  search: z.string().optional(),
 });
 
 export const getDashboardAttendanceQuerySchema = z
@@ -18,6 +20,8 @@ export const getDashboardAttendanceQuerySchema = z
     timeRange: z.enum(['7d', '30d', '90d', '1y']).optional(),
     department: z.string().optional(),
     location: z.string().optional(),
+    status: z.enum(['Active', 'On Leave', 'Terminated', 'Suspended']).optional(),
+    search: z.string().optional(),
   })
   .refine(
     (data) => {
@@ -32,5 +36,13 @@ export const getDashboardAttendanceQuerySchema = z
     }
   );
 
+export const getDashboardDistributionQuerySchema = z.object({
+  department: z.string().optional(),
+  location: z.string().optional(),
+  status: z.enum(['Active', 'On Leave', 'Terminated', 'Suspended']).optional(),
+  search: z.string().optional(),
+});
+
 export type GetDashboardSummaryQuery = z.infer<typeof getDashboardSummaryQuerySchema>;
 export type GetDashboardAttendanceQuery = z.infer<typeof getDashboardAttendanceQuerySchema>;
+export type GetDashboardDistributionQuery = z.infer<typeof getDashboardDistributionQuerySchema>;
