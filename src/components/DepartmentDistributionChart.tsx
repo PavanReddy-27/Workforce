@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Card,
   CardContent,
   Box,
   Typography,
-  ToggleButtonGroup,
-  ToggleButton,
   useTheme,
   alpha,
   Divider,
@@ -19,11 +17,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   Cell,
 } from 'recharts';
 import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
-import type { DepartmentMetric } from '../data/mockData';
+import type { DepartmentMetric } from '../types';
 
 interface DepartmentDistributionChartProps {
   data: DepartmentMetric[];
@@ -61,38 +58,14 @@ const CustomBarTooltip: React.FC<CustomTooltipProps> = ({ active, payload, isDar
           {item.name}
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-              Headcount:
-            </Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-              {item.headcount.toLocaleString()}
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-              Open Roles:
-            </Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#0284C7', fontVariantNumeric: 'tabular-nums' }}>
-              +{item.openRoles} openings
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-              Satisfaction (eNPS):
-            </Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: '#10B981', fontVariantNumeric: 'tabular-nums' }}>
-              {item.satisfaction} / 100
-            </Typography>
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-              Budget Utilized:
-            </Typography>
-            <Typography variant="caption" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-              {item.budget}%
-            </Typography>
-          </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+            Employees:
+          </Typography>
+          <Typography variant="caption" sx={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+            {item.headcount.toLocaleString()}
+          </Typography>
+        </Box>
         </Box>
       </Box>
     );
@@ -107,10 +80,7 @@ export const DepartmentDistributionChart: React.FC<DepartmentDistributionChartPr
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const [metricKey, setMetricKey] = useState<'headcount' | 'satisfaction'>('headcount');
-
   const totalHeadcount = data.reduce((acc, d) => acc + d.headcount, 0);
-  const totalOpenRoles = data.reduce((acc, d) => acc + d.openRoles, 0);
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -156,44 +126,34 @@ export const DepartmentDistributionChart: React.FC<DepartmentDistributionChartPr
               )}
             </Box>
             <Typography variant="caption" sx={{ color: theme.palette.text.secondary, mt: 0.25, display: 'block' }}>
-              Staff headcount and open requisitions by organizational business unit
+              Employee headcount by department
             </Typography>
           </Box>
-
-          <ToggleButtonGroup
-            value={metricKey}
-            exclusive
-            size="small"
-            onChange={(_, val) => {
-              if (val) setMetricKey(val);
-            }}
-            sx={{
-              backgroundColor: isDark ? alpha('#FFFFFF', 0.04) : alpha('#0F172A', 0.04),
-              p: '2px',
-              borderRadius: '6px',
-              '& .MuiToggleButton-root': {
-                border: 'none',
-                px: 1.25,
-                py: 0.35,
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                textTransform: 'none',
-                color: theme.palette.text.secondary,
-                borderRadius: '4px !important',
-                '&.Mui-selected': {
-                  backgroundColor: theme.palette.primary.main,
-                  color: '#FFFFFF',
-                },
-              },
-            }}
-          >
-            <ToggleButton value="headcount">Headcount & Roles</ToggleButton>
-            <ToggleButton value="satisfaction">Satisfaction</ToggleButton>
-          </ToggleButtonGroup>
         </Box>
 
         {/* Chart Canvas: expanded to 325px height to eliminate dead whitespace */}
         <Box sx={{ width: '100%', height: 325, minWidth: 0, minHeight: 0, my: 0.5 }}>
+          {!data || data.length === 0 ? (
+            <Box
+              sx={{
+                height: 325,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'text.secondary',
+                gap: 1,
+              }}
+            >
+              <BarChartOutlinedIcon sx={{ fontSize: 40, opacity: 0.3 }} />
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                No department distribution data available.
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                Adjust or reset active filters to view department breakdowns.
+              </Typography>
+            </Box>
+          ) : (
           <ResponsiveContainer width="100%" height={325} minWidth={0} minHeight={0}>
             <BarChart
               data={data}
@@ -226,73 +186,28 @@ export const DepartmentDistributionChart: React.FC<DepartmentDistributionChartPr
                 tick={{ fill: theme.palette.text.secondary, fontSize: 11 }}
               />
               <Tooltip content={<CustomBarTooltip isDark={isDark} />} />
-              <Legend
-                wrapperStyle={{ paddingTop: 8, fontSize: '0.78rem', fontWeight: 500 }}
-                formatter={(value) => (
-                  <span style={{ color: theme.palette.text.primary, marginRight: 14 }}>{value}</span>
-                )}
-              />
-
-              {metricKey === 'headcount' ? (
-                <>
-                  <Bar
-                    dataKey="headcount"
-                    name="Current Staff"
-                    radius={[4, 4, 0, 0]}
-                    cursor="pointer"
-                    isAnimationActive={false}
-                  >
-                    {data.map((entry) => {
-                      const isHighlighted =
-                        selectedDepartment === 'All Departments' ||
-                        selectedDepartment === entry.name;
-                      return (
-                        <Cell
-                          key={`cell-${entry.name}`}
-                          fill={isHighlighted ? '#2563EB' : alpha('#2563EB', 0.25)}
-                        />
-                      );
-                    })}
-                  </Bar>
-                  <Bar
-                    dataKey="openRoles"
-                    name="Open Requisitions"
-                    fill="#38BDF8"
-                    radius={[4, 4, 0, 0]}
-                    cursor="pointer"
-                    isAnimationActive={false}
-                  >
-                    {data.map((entry) => {
-                      const isHighlighted =
-                        selectedDepartment === 'All Departments' ||
-                        selectedDepartment === entry.name;
-                      return (
-                        <Cell
-                          key={`cell-roles-${entry.name}`}
-                          fill={isHighlighted ? '#38BDF8' : alpha('#38BDF8', 0.25)}
-                        />
-                      );
-                    })}
-                  </Bar>
-                </>
-              ) : (
-                <Bar
-                  dataKey="satisfaction"
-                  name="eNPS Satisfaction Score (0–100)"
-                  radius={[4, 4, 0, 0]}
-                  cursor="pointer"
-                  isAnimationActive={false}
-                >
-                  {data.map((entry) => (
+              <Bar
+                dataKey="headcount"
+                name="Employees"
+                radius={[4, 4, 0, 0]}
+                cursor="pointer"
+                isAnimationActive={false}
+              >
+                {data.map((entry) => {
+                  const isHighlighted =
+                    selectedDepartment === 'All Departments' ||
+                    selectedDepartment === entry.name;
+                  return (
                     <Cell
-                      key={`cell-sat-${entry.name}`}
-                      fill={entry.satisfaction >= 90 ? '#10B981' : entry.satisfaction >= 85 ? '#2563EB' : '#F59E0B'}
+                      key={`cell-${entry.name}`}
+                      fill={isHighlighted ? '#2563EB' : alpha('#2563EB', 0.25)}
                     />
-                  ))}
-                </Bar>
-              )}
+                  );
+                })}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
+          )}
         </Box>
 
         <Divider sx={{ my: 1.5 }} />
@@ -300,14 +215,11 @@ export const DepartmentDistributionChart: React.FC<DepartmentDistributionChartPr
         {/* Footer info tip & compact summary indicators */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
           <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
-            Tip: Click any bar to isolate department metrics across dashboard.
+            Tip: Click any bar to filter the dashboard by department.
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
               Total: <strong>{totalHeadcount.toLocaleString()}</strong> staff
-            </Typography>
-            <Typography variant="caption" sx={{ color: '#0284C7', fontWeight: 600, fontSize: '0.75rem' }}>
-              +{totalOpenRoles} Open Positions
             </Typography>
           </Box>
         </Box>

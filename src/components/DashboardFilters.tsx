@@ -1,5 +1,6 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
 import {
+  Alert,
   Card,
   Box,
   FormControl,
@@ -15,13 +16,24 @@ import {
   alpha,
 } from '@mui/material';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import {
-  DEPARTMENTS,
-  LOCATIONS,
-  EMPLOYMENT_TYPES,
-  TIME_RANGES,
-  type FilterState,
-} from '../data/mockData';
+import type { FilterState } from '../types';
+import { departmentService } from '../services/departments.service';
+import { employeeService } from '../services/employees.service';
+
+const TIME_RANGES: { value: '7d' | '30d' | '90d' | '1y'; label: string }[] = [
+  { value: '7d', label: '7D' },
+  { value: '30d', label: '30D' },
+  { value: '90d', label: '90D' },
+  { value: '1y', label: '1Y' },
+];
+
+const EMPLOYMENT_STATUS_OPTIONS = [
+  'All Types',
+  'Active',
+  'On Leave',
+  'Terminated',
+  'Suspended',
+];
 
 interface DashboardFiltersProps {
   filters: FilterState;
@@ -36,6 +48,39 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+
+  const [departmentOptions, setDepartmentOptions] = useState<string[]>([
+    'All Departments',
+  ]);
+  const [locationOptions, setLocationOptions] = useState<string[]>(['All Locations']);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([departmentService.getDepartments(), employeeService.getLocations()])
+      .then(([departments, locations]) => {
+        if (!departments.success || !Array.isArray(departments.data)) {
+          throw new Error(departments.message || 'Unable to load departments.');
+        }
+        if (!locations.success || !Array.isArray(locations.data)) {
+          throw new Error(locations.message || 'Unable to load office locations.');
+        }
+        if (active) {
+          setDepartmentOptions(['All Departments', ...departments.data.map((d) => d.name)]);
+          setLocationOptions(['All Locations', ...locations.data]);
+          setOptionsError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setOptionsError(err instanceof Error ? err.message : 'Unable to load filter options.');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const isFiltered =
     filters.department !== 'All Departments' ||
@@ -102,6 +147,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
           : '0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02)',
       }}
     >
+      {optionsError && <Alert severity="error" sx={{ mb: 1.5 }}>{optionsError}</Alert>}
       <Box
         sx={{
           display: 'flex',
@@ -141,7 +187,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               onChange={(e) => onFilterChange({ ...filters, department: e.target.value })}
               sx={selectSx}
             >
-              {DEPARTMENTS.map((d) => (
+              {departmentOptions.map((d) => (
                 <MenuItem key={d} value={d} sx={{ fontSize: '0.8125rem' }}>
                   {d}
                 </MenuItem>
@@ -169,7 +215,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               onChange={(e) => onFilterChange({ ...filters, location: e.target.value })}
               sx={selectSx}
             >
-              {LOCATIONS.map((l) => (
+              {locationOptions.map((l) => (
                 <MenuItem key={l} value={l} sx={{ fontSize: '0.8125rem' }}>
                   {l}
                 </MenuItem>
@@ -197,7 +243,7 @@ export const DashboardFilters: React.FC<DashboardFiltersProps> = ({
               onChange={(e) => onFilterChange({ ...filters, employmentType: e.target.value })}
               sx={selectSx}
             >
-              {EMPLOYMENT_TYPES.map((t) => (
+              {EMPLOYMENT_STATUS_OPTIONS.map((t) => (
                 <MenuItem key={t} value={t} sx={{ fontSize: '0.8125rem' }}>
                   {t}
                 </MenuItem>

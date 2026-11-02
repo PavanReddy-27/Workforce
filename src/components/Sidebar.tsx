@@ -26,7 +26,6 @@ import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalance
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import { tokens } from '../theme/theme';
 
 interface SidebarProps {
@@ -246,6 +245,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={onToggleCollapse}
               size="small"
               sx={{ color: theme.palette.text.secondary, width: 24, height: 24 }}
+              aria-label="Expand sidebar"
             >
               <ChevronRightIcon sx={{ fontSize: 18 }} />
             </IconButton>
@@ -284,31 +284,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 width: 32,
                 height: 32,
                 fontSize: '0.8125rem',
-                fontWeight: 600,
-                backgroundColor: isDark ? '#334155' : '#E2E8F0',
-                color: theme.palette.text.primary,
+                fontWeight: 700,
+                background: isDark
+                  ? 'linear-gradient(135deg, #3B82F6, #6366F1)'
+                  : 'linear-gradient(135deg, #DBEAFE, #EDE9FE)',
+                color: isDark ? '#FFFFFF' : '#3B82F6',
               }}
             >
-              PR
+              UK
             </Avatar>
             {(!collapsed || isMobile) && (
               <Box sx={{ overflow: 'hidden' }}>
-                <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.3 }}>
-                  Pavan Reddy
+                <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.3, color: 'text.primary' }}>
+                  Uday Kumar R
                 </Typography>
                 <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary, lineHeight: 1.3 }}>
-                  Developer
+                  WFA Developer
                 </Typography>
               </Box>
             )}
           </Box>
-          {(!collapsed || isMobile) && (
-            <Tooltip title="Log out" arrow>
-              <IconButton size="small" sx={{ color: theme.palette.text.secondary }}>
-                <LogoutOutlinedIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-            </Tooltip>
-          )}
         </Box>
       </Box>
     </Box>

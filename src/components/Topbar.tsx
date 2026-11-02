@@ -7,10 +7,7 @@ import {
   IconButton,
   InputBase,
   Button,
-  Badge,
   Tooltip,
-  Select,
-  MenuItem,
   useTheme,
   alpha,
 } from '@mui/material';
@@ -18,7 +15,6 @@ import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
-import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import AddIcon from '@mui/icons-material/Add';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -32,8 +28,6 @@ interface TopbarProps {
   onSearchChange: (q: string) => void;
   onExportClick: () => void;
   onAddEmployeeClick: () => void;
-  viewState?: 'normal' | 'loading' | 'empty' | 'error';
-  onViewStateChange?: (state: 'normal' | 'loading' | 'empty' | 'error') => void;
 }
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -44,8 +38,6 @@ export const Topbar: React.FC<TopbarProps> = ({
   onSearchChange,
   onExportClick,
   onAddEmployeeClick,
-  viewState = 'normal',
-  onViewStateChange,
 }) => {
   const theme = useTheme();
   const isDark = mode === 'dark';
@@ -118,40 +110,15 @@ export const Topbar: React.FC<TopbarProps> = ({
             placeholder="Search employee or role..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
+            inputProps={{ 'aria-label': 'Search employee or role' }}
             sx={{ fontSize: '0.8125rem', width: '100%', color: theme.palette.text.primary }}
           />
           {searchQuery && (
-            <IconButton size="small" onClick={() => onSearchChange('')} sx={{ p: 0.25 }}>
+            <IconButton size="small" onClick={() => onSearchChange('')} sx={{ p: 0.25 }} aria-label="Clear search">
               <ClearIcon sx={{ fontSize: 13 }} />
             </IconButton>
           )}
         </Box>
-
-        {/* State simulation selector for verifying Loading, Empty, Error states */}
-        {onViewStateChange && (
-          <Box sx={{ display: { xs: 'none', lg: 'flex' }, alignItems: 'center', gap: 0.75 }}>
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.7rem' }}>
-              State:
-            </Typography>
-            <Select
-              size="small"
-              value={viewState}
-              onChange={(e) => onViewStateChange(e.target.value as 'normal' | 'loading' | 'empty' | 'error')}
-              sx={{
-                height: 28,
-                fontSize: '0.75rem',
-                borderRadius: '6px',
-                color: theme.palette.text.secondary,
-                '& .MuiSelect-select': { py: '2px', px: '8px' },
-              }}
-            >
-              <MenuItem value="normal" sx={{ fontSize: '0.75rem' }}>Normal (Live)</MenuItem>
-              <MenuItem value="loading" sx={{ fontSize: '0.75rem' }}>Loading State</MenuItem>
-              <MenuItem value="empty" sx={{ fontSize: '0.75rem' }}>Empty State</MenuItem>
-              <MenuItem value="error" sx={{ fontSize: '0.75rem' }}>Error State</MenuItem>
-            </Select>
-          </Box>
-        )}
 
         {/* Actions */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -163,14 +130,6 @@ export const Topbar: React.FC<TopbarProps> = ({
               aria-label="Toggle theme"
             >
               {isDark ? <LightModeOutlinedIcon sx={{ fontSize: 18 }} /> : <DarkModeOutlinedIcon sx={{ fontSize: 18 }} />}
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Notifications" arrow>
-            <IconButton size="small" sx={{ color: theme.palette.text.secondary }} aria-label="Notifications">
-              <Badge variant="dot" color="primary" overlap="circular">
-                <NotificationsNoneOutlinedIcon sx={{ fontSize: 18 }} />
-              </Badge>
             </IconButton>
           </Tooltip>
 
