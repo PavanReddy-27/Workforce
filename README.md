@@ -27,6 +27,7 @@ The **Workforce Analytics Platform** provides HR leaders, department heads, and 
 | **Department Distribution** | SQL-backed bar chart of employee headcount by department. Clicking a bar filters dashboard analytics to that department. |
 | **Recent Hires** | Displays employee records ordered by their persisted hire date; it does not represent promotions, transfers, or a full audit log. |
 | **Employee Directory Table** | Server-side paginated data table featuring 300ms debounced search (matching name, employee code, or email), multi-field dropdown filters, and column sorting. |
+| **Attendance Records** | Paginated SQLite attendance entries with date, attendance-status, department, location, employee-status, and employee-search filters; stored date/time values are presented clearly, with times labeled UTC. |
 | **Multi-Dimensional Filters** | Dashboard filters for department, location, employment status, attendance date range (`7d`, `30d`, `90d`, `1y`), and employee search. Employee counts and distributions use the same search and workforce filters. Department and location options are loaded from API data. |
 | **Responsive UI & Themes** | Cohesive slate-blue dark mode (`#0F172A`) and crisp off-white light mode (`#F8FAFC`). Fluid layouts for Desktop (5 KPI cols), Tablet (2+2+1 grid), and Mobile (stacked cards + slide-out drawer). |
 | **Resilient State Indicators** | Skeleton loaders during fetch, empty state visual fallbacks with filter reset triggers, and connection error banners with manual retry buttons. |
@@ -285,10 +286,10 @@ The project includes unit, repository, service, integration, and E2E test suites
 
 ### Run Tests
 ```powershell
-# Run frontend client and live E2E integration tests (23 tests)
+# Run frontend client and live E2E integration tests (26 tests)
 npm test
 
-# Run backend unit, repository, and REST integration tests (59 tests)
+# Run backend unit, repository, and REST integration tests (61 tests)
 npm run server:test
 
 # Run ESLint across all TypeScript source files
@@ -302,9 +303,9 @@ npm run server:build
 ```
 
 ### Verification Results Summary
-- **Backend Tests (`npm run server:test`)**: 59/59 passed
-- **Frontend & Integration Tests (`npm test`)**: 23/23 passed (457ms)
-- **Total Automated Tests**: **82 passed, 0 failed (100% pass rate)**
+- **Backend Tests (`npm run server:test`)**: 61/61 passed
+- **Frontend & Integration Tests (`npm test`)**: 26/26 passed
+- **Total Automated Tests**: **87 passed, 0 failed (100% pass rate)**
 - **Static Analysis (`npm run lint`)**: 0 warnings, 0 errors
 - **Production Build (`npm run build`)**: Vite built in 567ms (0 errors)
 - **Backend Build (`npm run server:build`)**: TypeScript compiled cleanly (0 errors)

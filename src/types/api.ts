@@ -80,6 +80,9 @@ export interface AttendanceFilterParams extends PaginationParams {
   startDate?: string;
   endDate?: string;
   department?: string;
+  location?: string;
+  employeeStatus?: string;
+  search?: string;
   departmentId?: string;
   workMode?: 'In-Office' | 'Remote';
   status?: string;

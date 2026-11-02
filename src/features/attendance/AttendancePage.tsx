@@ -36,11 +36,11 @@ import {
   Tooltip,
   useTheme,
   alpha,
-  Grid,
 } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import FilterListOffIcon from '@mui/icons-material/FilterListOff';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
@@ -48,23 +48,37 @@ import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { attendanceService } from '../../services/attendance.service';
 import { employeeService } from '../../services/employees.service';
 import { departmentService } from '../../services/departments.service';
-import type { AttendanceWithEmployee, BackendEmployee } from '../../types';
+import type { AttendanceWithEmployee, BackendEmployee, FilterState, KpiMetric } from '../../types';
 import { EmployeeDetailDialog } from '../employees/EmployeeDetailDialog';
-import { exportToCsv } from '../../utils';
+import { exportToCsv, formatAttendanceDate, formatAttendanceTime } from '../../utils';
 
 const STATUS_OPTIONS = ['All Statuses', 'Present', 'Absent', 'On Leave'];
+
+interface AttendancePageProps {
+  dashboardFilters: FilterState;
+  dashboardKpis: KpiMetric[];
+  dashboardLoading: boolean;
+  onDepartmentChange: (department: string) => void;
+  onClearDashboardFilters: () => void;
+}
 
 function getDefaultDateRange() {
   const end = new Date();
   const start = new Date();
-  start.setDate(start.getDate() - 7);
+  start.setDate(start.getDate() - 6);
   return {
     startDate: start.toISOString().split('T')[0],
     endDate: end.toISOString().split('T')[0],
   };
 }
 
-export const AttendancePage: React.FC = () => {
+export const AttendancePage: React.FC<AttendancePageProps> = ({
+  dashboardFilters,
+  dashboardKpis,
+  dashboardLoading,
+  onDepartmentChange,
+  onClearDashboardFilters,
+}) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -83,7 +97,6 @@ export const AttendancePage: React.FC = () => {
   const [startDate, setStartDate] = useState(defaults.startDate);
   const [endDate, setEndDate] = useState(defaults.endDate);
   const [status, setStatus] = useState('All Statuses');
-  const [department, setDepartment] = useState('All Departments');
   const [departmentOptions, setDepartmentOptions] = useState(['All Departments']);
   const [departmentOptionsError, setDepartmentOptionsError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -94,8 +107,9 @@ export const AttendancePage: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<BackendEmployee | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // Summary stats from records
-  const [summary, setSummary] = useState({ present: 0, absent: 0, onLeave: 0, total: 0, rate: 0 });
+  useEffect(() => {
+    setPage(0);
+  }, [dashboardFilters.department]);
 
   useEffect(() => {
     let active = true;
@@ -137,7 +151,16 @@ export const AttendancePage: React.FC = () => {
           limit: rowsPerPage,
           startDate,
           endDate,
-          department: department !== 'All Departments' ? department : undefined,
+          department:
+            dashboardFilters.department !== 'All Departments'
+              ? dashboardFilters.department
+              : undefined,
+          location: dashboardFilters.location,
+          employeeStatus:
+            dashboardFilters.employmentType !== 'All Types'
+              ? dashboardFilters.employmentType
+              : undefined,
+          search: dashboardFilters.searchQuery || undefined,
           status: status !== 'All Statuses' ? status : undefined,
           sortBy,
           sortOrder,
@@ -149,22 +172,6 @@ export const AttendancePage: React.FC = () => {
         setRecords(res.data);
         setTotal(res.pagination.totalRecords);
 
-        // Populate summary from SQLite aggregated stats
-        if (res.summary) {
-          setSummary({
-            present: res.summary.present,
-            absent: res.summary.absent,
-            onLeave: res.summary.onLeave,
-            total: res.summary.total,
-            rate: res.summary.rate,
-          });
-        } else {
-          const present = res.data.filter((r) => r.status === 'Present').length;
-          const absent = res.data.filter((r) => r.status === 'Absent').length;
-          const onLeave = res.data.filter((r) => r.status === 'On Leave').length;
-          const t = present + absent + onLeave;
-          setSummary({ present, absent, onLeave, total: t, rate: t > 0 ? Math.round((present / t) * 100) : 0 });
-        }
       } else {
         setError(res.message || 'Failed to load attendance records');
       }
@@ -174,7 +181,19 @@ export const AttendancePage: React.FC = () => {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [page, rowsPerPage, startDate, endDate, department, status, sortBy, sortOrder]);
+  }, [
+    page,
+    rowsPerPage,
+    startDate,
+    endDate,
+    dashboardFilters.department,
+    dashboardFilters.location,
+    dashboardFilters.employmentType,
+    dashboardFilters.searchQuery,
+    status,
+    sortBy,
+    sortOrder,
+  ]);
 
   useEffect(() => {
     fetchRecords();
@@ -191,7 +210,7 @@ export const AttendancePage: React.FC = () => {
     setStartDate(d.startDate);
     setEndDate(d.endDate);
     setStatus('All Statuses');
-    setDepartment('All Departments');
+    onClearDashboardFilters();
     setPage(0);
   };
 
@@ -224,14 +243,40 @@ export const AttendancePage: React.FC = () => {
     );
   };
 
-  const isFiltered = status !== 'All Statuses' || department !== 'All Departments';
+  const isFiltered =
+    status !== 'All Statuses' ||
+    dashboardFilters.department !== 'All Departments' ||
+    dashboardFilters.location !== 'All Locations' ||
+    dashboardFilters.employmentType !== 'All Types' ||
+    Boolean(dashboardFilters.searchQuery) ||
+    startDate !== defaults.startDate ||
+    endDate !== defaults.endDate;
+  const activeEmployeeFilters = [
+    dashboardFilters.location !== 'All Locations' ? `Location: ${dashboardFilters.location}` : null,
+    dashboardFilters.employmentType !== 'All Types'
+      ? `Employment: ${dashboardFilters.employmentType}`
+      : null,
+    dashboardFilters.searchQuery ? `Search: ${dashboardFilters.searchQuery}` : null,
+  ].filter((filter): filter is string => filter !== null);
 
-  const summaryCards = [
-    { label: 'Present', value: summary.present, color: '#10B981', icon: <CheckCircleOutlinedIcon /> },
-    { label: 'Absent', value: summary.absent, color: '#EF4444', icon: <CancelOutlinedIcon /> },
-    { label: 'On Leave', value: summary.onLeave, color: '#F59E0B', icon: <EventBusyOutlinedIcon /> },
-    { label: 'Attendance Rate', value: `${summary.rate}%`, color: '#3B82F6', icon: <EventAvailableOutlinedIcon /> },
+  const dashboardMetrics = new Map(dashboardKpis.map((metric) => [metric.id, metric]));
+  const summaryCardDefinitions: {
+    id: KpiMetric['id'];
+    label: string;
+    color: string;
+    icon: React.ReactNode;
+  }[] = [
+    { id: 'total_employees', label: 'Total Employees', color: '#3B82F6', icon: <PeopleAltOutlinedIcon /> },
+    { id: 'present_today', label: 'Present', color: '#10B981', icon: <CheckCircleOutlinedIcon /> },
+    { id: 'absent_today', label: 'Absent', color: '#EF4444', icon: <CancelOutlinedIcon /> },
+    { id: 'on_leave', label: 'On Leave', color: '#F59E0B', icon: <EventBusyOutlinedIcon /> },
+    { id: 'attendance_rate', label: 'Attendance Rate', color: '#3B82F6', icon: <EventAvailableOutlinedIcon /> },
   ];
+  const summaryCards = summaryCardDefinitions.map((card) => ({
+    ...card,
+    value: dashboardMetrics.get(card.id)?.value ?? '0',
+    loading: dashboardLoading,
+  }));
 
   const handleExportCsv = () => {
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -239,13 +284,13 @@ export const AttendancePage: React.FC = () => {
       `attendance_records_${todayStr}.csv`,
       records,
       [
-        { header: 'Date', accessor: (r) => r.attendance_date },
+        { header: 'Date', accessor: (r) => formatAttendanceDate(r.attendance_date) },
         { header: 'Employee Code', accessor: (r) => r.employee_code || `EMP-${r.employee_id}` },
         { header: 'Employee Name', accessor: (r) => `${r.first_name} ${r.last_name}` },
         { header: 'Department', accessor: (r) => r.department_name },
         { header: 'Status', accessor: (r) => r.status },
-        { header: 'Check In', accessor: (r) => r.check_in_time || '--' },
-        { header: 'Check Out', accessor: (r) => r.check_out_time || '--' },
+        { header: 'Check In (UTC)', accessor: (r) => formatAttendanceTime(r.check_in_time) },
+        { header: 'Check Out (UTC)', accessor: (r) => formatAttendanceTime(r.check_out_time) },
       ]
     );
   };
@@ -261,7 +306,7 @@ export const AttendancePage: React.FC = () => {
           Attendance Management
         </Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-          View and analyze employee attendance records across all departments and time periods.
+          Attendance snapshot matches Overview; use the date range below to filter attendance records.
         </Typography>
       </Box>
 
@@ -270,11 +315,21 @@ export const AttendancePage: React.FC = () => {
           Unable to load department filters: {departmentOptionsError}
         </Alert>
       )}
-
-      {/* Summary Cards */}
-      <Grid container spacing={2} sx={{ mb: 2.5 }}>
+      {/* Overview KPI snapshot */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'repeat(2, minmax(0, 1fr))',
+            sm: 'repeat(3, minmax(0, 1fr))',
+            lg: 'repeat(5, minmax(0, 1fr))',
+          },
+          gap: 2,
+          mb: 2.5,
+        }}
+      >
         {summaryCards.map((card) => (
-          <Grid key={card.label} size={{ xs: 6, sm: 3 }}>
+          <Box key={card.label}>
             <Card
               sx={{
                 transition: 'transform 0.15s',
@@ -288,7 +343,7 @@ export const AttendancePage: React.FC = () => {
                   </Typography>
                   <Box sx={{ color: card.color, '& svg': { fontSize: 18 } }}>{card.icon}</Box>
                 </Box>
-                {loading ? (
+                {card.loading ? (
                   <Skeleton width="60%" height={30} />
                 ) : (
                   <Typography sx={{ fontWeight: 700, fontSize: '1.5rem', color: 'text.primary', letterSpacing: '-0.02em' }}>
@@ -297,9 +352,9 @@ export const AttendancePage: React.FC = () => {
                 )}
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
         ))}
-      </Grid>
+      </Box>
 
       {/* Filter Bar */}
       <Card sx={{ mb: 2, borderRadius: '8px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'}` }}>
@@ -323,15 +378,22 @@ export const AttendancePage: React.FC = () => {
               sx={{ width: 160 }}
               slotProps={{ inputLabel: { shrink: true } }}
             />
-            <FormControl size="small" sx={{ width: 150 }}>
-              <InputLabel>Status</InputLabel>
-              <Select value={status} label="Status" onChange={(e) => { setStatus(e.target.value); setPage(0); }}>
+            <FormControl size="small" sx={{ width: 175 }}>
+              <InputLabel>Attendance Status</InputLabel>
+              <Select value={status} label="Attendance Status" onChange={(e) => { setStatus(e.target.value); setPage(0); }}>
                 {STATUS_OPTIONS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
               </Select>
             </FormControl>
             <FormControl size="small" sx={{ width: 180 }}>
               <InputLabel>Department</InputLabel>
-              <Select value={department} label="Department" onChange={(e) => { setDepartment(e.target.value); setPage(0); }}>
+              <Select
+                value={dashboardFilters.department}
+                label="Department"
+                onChange={(e) => {
+                  onDepartmentChange(e.target.value);
+                  setPage(0);
+                }}
+              >
                 {departmentOptions.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
               </Select>
             </FormControl>
@@ -362,12 +424,26 @@ export const AttendancePage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {activeEmployeeFilters.length > 0 && (
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', mr: 0.25 }}>
+            Overview employee filters:
+          </Typography>
+          {activeEmployeeFilters.map((filter) => (
+            <Chip key={filter} label={filter} size="small" variant="outlined" />
+          ))}
+        </Box>
+      )}
+
       {/* Attendance Table */}
       <Card sx={{ borderRadius: '8px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'}` }}>
         <CardContent sx={{ p: 0 }}>
           <Box sx={{ px: 2.5, pt: 2, pb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '0.9375rem' }}>Attendance Records</Typography>
             <Chip label={`${total.toLocaleString()} Records`} size="small" sx={{ height: 22, fontSize: '0.6875rem', fontWeight: 600 }} />
+            <Typography variant="caption" sx={{ color: 'text.secondary', ml: 'auto' }}>
+              {formatAttendanceDate(startDate)} – {formatAttendanceDate(endDate)}
+            </Typography>
           </Box>
 
           {error && (
@@ -393,8 +469,8 @@ export const AttendancePage: React.FC = () => {
                       Status
                     </TableSortLabel>
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.25 }}>Check In</TableCell>
-                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.25 }}>Check Out</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.25 }}>Check In (UTC)</TableCell>
+                  <TableCell sx={{ fontWeight: 600, fontSize: '0.75rem', py: 1.25 }}>Check Out (UTC)</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -434,7 +510,11 @@ export const AttendancePage: React.FC = () => {
                               setDetailOpen(true);
                             }
                           } catch (err) {
-                            console.error('Failed to load employee details', err);
+                            setError(
+                              err instanceof Error
+                                ? `Unable to open employee details: ${err.message}`
+                                : 'Unable to open employee details.'
+                            );
                           }
                         }}
                         sx={{
@@ -443,7 +523,7 @@ export const AttendancePage: React.FC = () => {
                         }}
                       >
                         <TableCell sx={{ fontSize: '0.78125rem', fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>
-                          {rec.attendance_date}
+                          {formatAttendanceDate(rec.attendance_date)}
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
@@ -473,10 +553,10 @@ export const AttendancePage: React.FC = () => {
                         <TableCell sx={{ fontSize: '0.78125rem', color: 'text.secondary' }}>{rec.location}</TableCell>
                         <TableCell>{getStatusChip(rec.status)}</TableCell>
                         <TableCell sx={{ fontSize: '0.78125rem', color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
-                          {rec.check_in_time || '—'}
+                          {formatAttendanceTime(rec.check_in_time)}
                         </TableCell>
                         <TableCell sx={{ fontSize: '0.78125rem', color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
-                          {rec.check_out_time || '—'}
+                          {formatAttendanceTime(rec.check_out_time)}
                         </TableCell>
                       </TableRow>
                     ))}

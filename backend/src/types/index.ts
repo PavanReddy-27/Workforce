@@ -92,6 +92,9 @@ export interface AttendanceFilterOptions extends PaginationParams {
   startDate?: string;
   endDate?: string;
   department?: string;
+  location?: string;
+  employeeStatus?: string;
+  search?: string;
   status?: string;
 }
 

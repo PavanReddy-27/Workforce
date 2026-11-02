@@ -44,6 +44,35 @@ describe('Attendance API Integration Tests', () => {
     expect(res.body.data.every((r: { status: string }) => r.status === 'Present')).toBe(true);
   });
 
+  it('GET /api/attendance filters original records by location, employee status, and employee search', async () => {
+    const locationRes = await request(app).get(
+      '/api/attendance?location=London%20Tech%20Hub'
+    );
+    const statusRes = await request(app).get(
+      '/api/attendance?employeeStatus=On%20Leave'
+    );
+    const searchRes = await request(app).get('/api/attendance?search=Sarah');
+
+    expect(locationRes.status).toBe(200);
+    expect(locationRes.body.data.length).toBeGreaterThan(0);
+    expect(locationRes.body.data.every(
+      (record: { location: string }) => record.location === 'London Tech Hub'
+    )).toBe(true);
+
+    expect(statusRes.status).toBe(200);
+    expect(statusRes.body.data.length).toBeGreaterThan(0);
+    expect(statusRes.body.data.every(
+      (record: { status: string }) => record.status === 'On Leave'
+    )).toBe(true);
+
+    expect(searchRes.status).toBe(200);
+    expect(searchRes.body.data.length).toBeGreaterThan(0);
+    expect(searchRes.body.data.every(
+      (record: { first_name: string; last_name: string }) =>
+        `${record.first_name} ${record.last_name}`.toLowerCase().includes('sarah')
+    )).toBe(true);
+  });
+
   it('GET /api/attendance accepts valid date range', async () => {
     const today = new Date().toISOString().split('T')[0];
     const d = new Date();

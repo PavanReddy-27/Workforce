@@ -472,11 +472,17 @@ Retrieves paginated daily attendance records.
 | `page` | `number` | No | 1 | Page number (>= 1) |
 | `limit` | `number` | No | 20 | Records per page (1 to 100) |
 | `employeeId` | `number` | No | - | Filter by employee ID |
-| `departmentId` | `number` | No | - | Filter by department ID |
+| `department` | `string` | No | - | Filter by department name or ID |
 | `date` | `string` | No | - | Single date filter (`YYYY-MM-DD`) |
 | `startDate` | `string` | No | - | Range start date (`YYYY-MM-DD`) |
 | `endDate` | `string` | No | - | Range end date (`YYYY-MM-DD`) |
+| `department` | `string` | No | - | Department name or ID |
+| `location` | `string` | No | - | Employee office location |
+| `employeeStatus` | `string` | No | - | `Active`, `On Leave`, `Terminated`, or `Suspended` |
+| `search` | `string` | No | - | Match employee name, code, or email |
 | `status` | `string` | No | - | `Present`, `Absent`, `On Leave` |
+| `sortBy` | `string` | No | `attendance_date` | Supported attendance column |
+| `sortOrder` | `string` | No | `desc` | `asc` or `desc` |
 
 **Response (HTTP 200)**:
 ```json
@@ -492,8 +498,8 @@ Retrieves paginated daily attendance records.
       "department_name": "Engineering",
       "attendance_date": "2026-10-30",
       "status": "Present",
-      "check_in_time": "08:45:00",
-      "check_out_time": "17:30:00",
+      "check_in_time": "2026-10-30T08:45:00.000Z",
+      "check_out_time": "2026-10-30T17:30:00.000Z",
       "created_at": "2026-10-30T08:45:00.000Z",
       "updated_at": "2026-10-30T08:45:00.000Z"
     }

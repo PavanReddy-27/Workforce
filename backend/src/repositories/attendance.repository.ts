@@ -27,6 +27,9 @@ export class AttendanceRepository {
       startDate,
       endDate,
       department,
+      location,
+      employeeStatus,
+      search,
       status,
       sortBy = 'attendance_date',
       sortOrder = 'desc',
@@ -65,6 +68,27 @@ export class AttendanceRepository {
         whereClauses.push('LOWER(d.name) = LOWER(?)');
         params.push(department);
       }
+    }
+
+    if (location && location !== 'All Locations') {
+      whereClauses.push('e.location = ?');
+      params.push(location);
+    }
+
+    if (employeeStatus) {
+      whereClauses.push('e.employment_status = ?');
+      params.push(employeeStatus);
+    }
+
+    if (search?.trim()) {
+      const term = `%${search.trim().toLowerCase()}%`;
+      whereClauses.push(`(
+        LOWER(e.first_name) LIKE ? OR
+        LOWER(e.last_name) LIKE ? OR
+        LOWER(e.employee_code) LIKE ? OR
+        LOWER(e.email) LIKE ?
+      )`);
+      params.push(term, term, term, term);
     }
 
     if (status) {

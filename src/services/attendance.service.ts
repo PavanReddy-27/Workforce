@@ -41,6 +41,9 @@ export class AttendanceApiService implements IAttendanceService {
       startDate: params?.startDate,
       endDate: params?.endDate,
       department: params?.department && params.department !== 'All Departments' ? params.department : undefined,
+      location: params?.location && params.location !== 'All Locations' ? params.location : undefined,
+      employeeStatus: params?.employeeStatus,
+      search: params?.search,
       status: params?.status && params.status !== 'All Statuses' ? params.status : undefined,
     };
 
@@ -66,6 +69,9 @@ export class AttendanceApiService implements IAttendanceService {
       startDate: params?.startDate,
       endDate: params?.endDate,
       department: params?.department && params.department !== 'All Departments' ? params.department : undefined,
+      location: params?.location && params.location !== 'All Locations' ? params.location : undefined,
+      employeeStatus: params?.employeeStatus,
+      search: params?.search,
       status: params?.status && params.status !== 'All Statuses' ? params.status : undefined,
     };
 

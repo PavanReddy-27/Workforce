@@ -23,6 +23,29 @@ export function formatDate(dateStr: string): string {
   }
 }
 
+export function formatAttendanceDate(dateStr: string): string {
+  const date = new Date(`${dateStr}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(date);
+}
+
+export function formatAttendanceTime(timeStr: string | null): string {
+  if (!timeStr) return '—';
+  const date = new Date(timeStr);
+  if (Number.isNaN(date.getTime())) return timeStr;
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: 'UTC',
+  }).format(date);
+}
+
 export function getInitials(name: string): string {
   return name
     .split(' ')

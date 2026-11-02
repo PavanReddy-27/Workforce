@@ -255,7 +255,17 @@ export const App: React.FC = () => {
         return <EmployeeTable refreshTrigger={tableRefreshKey} />;
 
       case 'attendance':
-        return <AttendancePage />;
+        return (
+          <AttendancePage
+            dashboardFilters={filters}
+            dashboardKpis={kpis}
+            dashboardLoading={loading}
+            onDepartmentChange={(department) =>
+              setFilters((prev) => ({ ...prev, department }))
+            }
+            onClearDashboardFilters={handleResetAllFilters}
+          />
+        );
 
       case 'departments':
         return <DepartmentsPage />;
