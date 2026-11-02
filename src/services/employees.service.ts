@@ -22,6 +22,11 @@ export type CreateEmployeeInput = Partial<BackendEmployee> & {
   role?: string;
 };
 
+export type UpdateEmployeeInput = Partial<BackendEmployee> & {
+  department?: string;
+  role?: string;
+};
+
 export interface IEmployeeService {
   getEmployees(
     params?: EmployeeFilterParams,
@@ -37,7 +42,7 @@ export interface IEmployeeService {
   ): Promise<ApiResponse<BackendEmployee>>;
   updateEmployee(
     id: string | number,
-    updates: Partial<BackendEmployee>,
+    updates: UpdateEmployeeInput,
     options?: RequestOptions
   ): Promise<ApiResponse<BackendEmployee>>;
   deleteEmployee(
@@ -91,7 +96,7 @@ export class EmployeeApiService implements IEmployeeService {
 
   async updateEmployee(
     id: string | number,
-    updates: Partial<BackendEmployee>,
+    updates: UpdateEmployeeInput,
     options?: RequestOptions
   ): Promise<ApiResponse<BackendEmployee>> {
     return httpClient.put<BackendEmployee>(API_ENDPOINTS.EMPLOYEES.BY_ID(id), updates, options);

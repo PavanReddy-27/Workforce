@@ -45,11 +45,32 @@ import ClearIcon from '@mui/icons-material/Clear';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import FilterListOffIcon from '@mui/icons-material/FilterListOff';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import { employeeService } from '../../services/employees.service';
 import { departmentService } from '../../services/departments.service';
 import type { BackendEmployee } from '../../types';
+import { EmployeeDetailDialog } from './EmployeeDetailDialog';
+import { exportToCsv } from '../../utils';
 
-export const EmployeeTable: React.FC = () => {
+export interface EmployeeTableProps {
+  initialDepartment?: string;
+  initialLocation?: string;
+  initialStatus?: string;
+  searchQuery?: string;
+  refreshTrigger?: number;
+  title?: string;
+  subtitle?: string;
+}
+
+export const EmployeeTable: React.FC<EmployeeTableProps> = ({
+  initialDepartment,
+  initialLocation,
+  initialStatus,
+  searchQuery,
+  refreshTrigger: externalRefreshTrigger,
+  title = 'Employee Directory',
+  subtitle = 'Database-backed employee records with server-side pagination, search, and sorting',
+}) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -66,11 +87,50 @@ export const EmployeeTable: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Filter state
-  const [searchInput, setSearchInput] = useState<string>('');
-  const [debouncedSearch, setDebouncedSearch] = useState<string>('');
-  const [department, setDepartment] = useState<string>('All Departments');
-  const [location, setLocation] = useState<string>('All Locations');
-  const [status, setStatus] = useState<string>('All Statuses');
+  const [searchInput, setSearchInput] = useState<string>(searchQuery ?? '');
+  const [debouncedSearch, setDebouncedSearch] = useState<string>(searchQuery ?? '');
+  const [department, setDepartment] = useState<string>(initialDepartment ?? 'All Departments');
+  const [location, setLocation] = useState<string>(initialLocation ?? 'All Locations');
+  const [status, setStatus] = useState<string>(
+    initialStatus === 'All Types' ? 'All Statuses' : initialStatus ?? 'All Statuses'
+  );
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+
+  useEffect(() => {
+    if (initialDepartment !== undefined) {
+      setDepartment(initialDepartment);
+      setPage(0);
+    }
+  }, [initialDepartment]);
+
+  useEffect(() => {
+    if (initialLocation !== undefined) {
+      setLocation(initialLocation);
+      setPage(0);
+    }
+  }, [initialLocation]);
+
+  useEffect(() => {
+    if (initialStatus !== undefined) {
+      const mapped = initialStatus === 'All Types' ? 'All Statuses' : initialStatus;
+      setStatus(mapped);
+      setPage(0);
+    }
+  }, [initialStatus]);
+
+  useEffect(() => {
+    if (searchQuery !== undefined) {
+      setSearchInput(searchQuery);
+      setDebouncedSearch(searchQuery);
+      setPage(0);
+    }
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (externalRefreshTrigger !== undefined) {
+      setRefreshTrigger((prev) => prev + 1);
+    }
+  }, [externalRefreshTrigger]);
 
   // Dynamic filter options
   const [departmentOptions, setDepartmentOptions] = useState<string[]>([
@@ -94,7 +154,10 @@ export const EmployeeTable: React.FC = () => {
   const statusOptions = ['All Statuses', 'Active', 'On Leave', 'Terminated'];
 
   const abortControllerRef = useRef<AbortController | null>(null);
-  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+
+  // Employee detail dialog
+  const [selectedEmployee, setSelectedEmployee] = useState<BackendEmployee | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   // Load departments dynamically from backend
   useEffect(() => {
@@ -231,6 +294,54 @@ export const EmployeeTable: React.FC = () => {
     location !== 'All Locations' ||
     status !== 'All Statuses';
 
+  const handleExportCsv = async () => {
+    try {
+      const res = await employeeService.getEmployees({
+        page: 1,
+        limit: 1000,
+        search: debouncedSearch || undefined,
+        department: department !== 'All Departments' ? department : undefined,
+        location: location !== 'All Locations' ? location : undefined,
+        status: status !== 'All Statuses' ? status : undefined,
+        sortBy,
+        sortOrder,
+      });
+      const dataToExport = res?.data && res.data.length > 0 ? res.data : employees;
+      const todayStr = new Date().toISOString().slice(0, 10);
+      exportToCsv(
+        `employees_export_${todayStr}.csv`,
+        dataToExport,
+        [
+          { header: 'Employee Code', accessor: (e) => e.employee_code || `EMP-${e.id}` },
+          { header: 'First Name', accessor: (e) => e.first_name },
+          { header: 'Last Name', accessor: (e) => e.last_name },
+          { header: 'Email', accessor: (e) => e.email },
+          { header: 'Department', accessor: (e) => e.department_name || e.department_id },
+          { header: 'Job Title', accessor: (e) => e.job_title },
+          { header: 'Location', accessor: (e) => e.location },
+          { header: 'Employment Status', accessor: (e) => e.employment_status },
+          { header: 'Hire Date', accessor: (e) => e.hire_date },
+        ]
+      );
+    } catch {
+      exportToCsv(
+        `employees_export_${new Date().toISOString().slice(0, 10)}.csv`,
+        employees,
+        [
+          { header: 'Employee Code', accessor: (e) => e.employee_code || `EMP-${e.id}` },
+          { header: 'First Name', accessor: (e) => e.first_name },
+          { header: 'Last Name', accessor: (e) => e.last_name },
+          { header: 'Email', accessor: (e) => e.email },
+          { header: 'Department', accessor: (e) => e.department_name || e.department_id },
+          { header: 'Job Title', accessor: (e) => e.job_title },
+          { header: 'Location', accessor: (e) => e.location },
+          { header: 'Employment Status', accessor: (e) => e.employment_status },
+          { header: 'Hire Date', accessor: (e) => e.hire_date },
+        ]
+      );
+    }
+  };
+
   return (
     <Card
       sx={{
@@ -270,7 +381,7 @@ export const EmployeeTable: React.FC = () => {
                 <PeopleAltOutlinedIcon sx={{ fontSize: 17 }} />
               </Box>
               <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '0.9375rem' }}>
-                Employee Directory
+                {title}
               </Typography>
               <Chip
                 label={`${totalRecords} Records`}
@@ -279,11 +390,27 @@ export const EmployeeTable: React.FC = () => {
               />
             </Box>
             <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.25, display: 'block' }}>
-              Database-backed employee records with server-side pagination, search, and sorting
+              {subtitle}
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Tooltip title="Export to CSV">
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<FileDownloadOutlinedIcon sx={{ fontSize: 16 }} />}
+                onClick={handleExportCsv}
+                sx={{
+                  fontSize: '0.75rem',
+                  height: 36,
+                  textTransform: 'none',
+                  borderRadius: '6px',
+                }}
+              >
+                Export CSV
+              </Button>
+            </Tooltip>
             {isFiltered && (
               <Button
                 size="small"
@@ -554,8 +681,10 @@ export const EmployeeTable: React.FC = () => {
                   <TableRow
                     key={emp.id}
                     hover
+                    onClick={() => { setSelectedEmployee(emp); setDetailOpen(true); }}
                     sx={{
                       '&:last-child td, &:last-child th': { border: 0 },
+                      cursor: 'pointer',
                     }}
                   >
                     {/* Code */}
@@ -619,6 +748,24 @@ export const EmployeeTable: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        {/* Employee Detail / Edit / Delete Dialog */}
+        <EmployeeDetailDialog
+          employee={selectedEmployee}
+          open={detailOpen}
+          onClose={() => { setDetailOpen(false); setSelectedEmployee(null); }}
+          onUpdated={(updated) => {
+            setEmployees((prev) => prev.map((e) => e.id === updated.id ? updated : e));
+            setDetailOpen(false);
+            setSelectedEmployee(null);
+          }}
+          onDeleted={(id) => {
+            setEmployees((prev) => prev.filter((e) => e.id !== id));
+            setTotalRecords((prev) => Math.max(0, prev - 1));
+            setDetailOpen(false);
+            setSelectedEmployee(null);
+          }}
+        />
 
         {/* Server-Side Pagination */}
         <TablePagination

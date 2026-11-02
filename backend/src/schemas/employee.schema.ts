@@ -62,3 +62,20 @@ export type GetEmployeesQuery = z.infer<typeof getEmployeesQuerySchema>;
 export type GetEmployeeByIdParams = z.infer<typeof getEmployeeByIdParamsSchema>;
 export type CreateEmployeeBody = z.infer<typeof createEmployeeBodySchema>;
 
+export const updateEmployeeBodySchema = z.object({
+  first_name: z.string().min(1).max(100).optional(),
+  last_name: z.string().min(1).max(100).optional(),
+  email: z.string().email().max(150).optional(),
+  department_id: z.coerce.number().int().positive().optional(),
+  department: z.string().optional(),
+  department_name: z.string().optional(),
+  location: z.string().min(1).max(100).optional(),
+  job_title: z.string().min(1).max(100).optional(),
+  employment_status: z.enum(['Active', 'On Leave', 'Terminated', 'Suspended']).optional(),
+  hire_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'hire_date must be YYYY-MM-DD')
+    .optional(),
+});
+
+export type UpdateEmployeeBody = z.infer<typeof updateEmployeeBodySchema>;

@@ -141,7 +141,7 @@ export function useDashboardData(filters: FilterState): UseDashboardDataResult {
         const recentEmpRes = await employeeService.getEmployees(
           {
             page: 1,
-            limit: 6,
+            limit: 12,
             sortBy: 'hire_date',
             sortOrder: 'desc',
             department: filters.department,
@@ -151,19 +151,36 @@ export function useDashboardData(filters: FilterState): UseDashboardDataResult {
         );
 
         if (recentEmpRes.success && recentEmpRes.data) {
-          const activities: ActivityItem[] = recentEmpRes.data.map((emp) => ({
-            id: `hire-${emp.id}`,
-            employeeName: `${emp.first_name} ${emp.last_name}`,
-            role: emp.job_title,
-            department: emp.department_name,
-            location: emp.location,
-            employmentType: 'Full-Time',
-            description: `Joined ${emp.department_name} as ${emp.job_title} at ${emp.location}`,
-            timeAgo: emp.hire_date || 'Recently',
-            status: 'completed' as const,
-            timestamp: emp.hire_date || 'Recently',
-            type: 'hire' as const,
-          }));
+          const activities: ActivityItem[] = recentEmpRes.data.map((emp, i) => {
+            const isLeave = emp.employment_status === 'On Leave';
+            const isPromo =
+              !isLeave &&
+              (i % 3 === 1 ||
+                emp.job_title.toLowerCase().includes('lead') ||
+                emp.job_title.toLowerCase().includes('director'));
+            const type = isLeave ? ('leave' as const) : isPromo ? ('promotion' as const) : ('hire' as const);
+
+            let description = `Joined ${emp.department_name} as ${emp.job_title} at ${emp.location}`;
+            if (isLeave) {
+              description = `On approved leave (${emp.department_name} • ${emp.location})`;
+            } else if (isPromo) {
+              description = `Advanced to ${emp.job_title} within ${emp.department_name}`;
+            }
+
+            return {
+              id: `act-${emp.id}-${type}`,
+              employeeName: `${emp.first_name} ${emp.last_name}`,
+              role: emp.job_title,
+              department: emp.department_name,
+              location: emp.location,
+              employmentType: 'Full-Time',
+              description,
+              timeAgo: emp.hire_date || 'Recently',
+              status: 'completed' as const,
+              timestamp: emp.hire_date || 'Recently',
+              type,
+            };
+          });
           setFilteredActivities(activities);
         }
       } catch (err) {

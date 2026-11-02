@@ -125,10 +125,16 @@ describe('Live End-to-End Frontend-Backend Integration Tests', () => {
       employment_status: 'Active',
     });
 
-    expect(newEmp.success).toBe(true);
-    expect(newEmp.data.first_name).toBe('TestQA');
-    expect(newEmp.data.department_name).toBe('Engineering');
-    expect(newEmp.data.id).toBeGreaterThan(0);
+    try {
+      expect(newEmp.success).toBe(true);
+      expect(newEmp.data.first_name).toBe('TestQA');
+      expect(newEmp.data.department_name).toBe('Engineering');
+      expect(newEmp.data.id).toBeGreaterThan(0);
+    } finally {
+      if (newEmp?.data?.id) {
+        await employeeService.deleteEmployee(newEmp.data.id);
+      }
+    }
   });
 
   it('should return empty list when employee search matches no records', async () => {

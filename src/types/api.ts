@@ -23,6 +23,13 @@ export interface PaginatedResponse<T> {
   success: boolean;
   data: T[];
   pagination: PaginationMeta;
+  summary?: {
+    present: number;
+    absent: number;
+    onLeave: number;
+    total: number;
+    rate: number;
+  };
   message?: string;
   timestamp: string;
 }

@@ -78,11 +78,20 @@ export interface EmployeeFilterOptions extends PaginationParams {
   status?: string;
 }
 
+export interface AttendanceSummary {
+  present: number;
+  absent: number;
+  onLeave: number;
+  total: number;
+  rate: number;
+}
+
 export interface AttendanceFilterOptions extends PaginationParams {
   employeeId?: number;
   date?: string;
   startDate?: string;
   endDate?: string;
+  department?: string;
   status?: string;
 }
 

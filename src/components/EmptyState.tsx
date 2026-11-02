@@ -1,6 +1,11 @@
+/**
+ * EmptyState Component
+ * Shown when filters return zero matching employee records.
+ */
+
 import React from 'react';
-import { Box, Typography, Button, useTheme } from '@mui/material';
-import FilterListOffOutlinedIcon from '@mui/icons-material/FilterListOffOutlined';
+import { Box, Typography, Button, useTheme, alpha } from '@mui/material';
+import InboxOutlinedIcon from '@mui/icons-material/InboxOutlined';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 interface EmptyStateProps {
@@ -11,17 +16,20 @@ interface EmptyStateProps {
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
-  title = 'No workforce records match your criteria',
-  message = 'Try adjusting your department, location, employment type, or search term to see telemetry data.',
+  title = 'No records match your criteria',
+  message = 'Try adjusting your department, location, employment type, or search term to see matching data.',
   onResetFilters,
-  actionText = 'Reset all filters',
+  actionText = 'Reset All Filters',
 }) => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
 
   return (
     <Box
+      role="status"
+      aria-live="polite"
       sx={{
-        py: 8,
+        py: 9,
         px: 3,
         textAlign: 'center',
         display: 'flex',
@@ -29,34 +37,52 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: 2,
-        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(30, 41, 59, 0.4)' : '#FFFFFF',
-        border: `1px dashed ${theme.palette.divider}`,
-        my: 3,
+        backgroundColor: isDark ? 'rgba(30, 41, 59, 0.45)' : '#FFFFFF',
+        border: `1.5px dashed ${theme.palette.divider}`,
+        my: 2,
       }}
     >
+      {/* Icon */}
       <Box
         sx={{
-          width: 48,
-          height: 48,
-          borderRadius: '50%',
-          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(148, 163, 184, 0.1)' : '#F1F5F9',
-          color: theme.palette.text.secondary,
+          width: 64,
+          height: 64,
+          borderRadius: '16px',
+          backgroundColor: isDark
+            ? 'rgba(148, 163, 184, 0.1)'
+            : alpha(theme.palette.primary.main, 0.06),
+          color: theme.palette.text.disabled,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          mb: 2,
+          mb: 2.5,
+          '& svg': { fontSize: 32 },
         }}
       >
-        <FilterListOffOutlinedIcon sx={{ fontSize: 24 }} />
+        <InboxOutlinedIcon />
       </Box>
 
-      <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', mb: 0.5 }}>
+      <Typography
+        variant="h6"
+        sx={{
+          fontWeight: 700,
+          fontSize: '1rem',
+          letterSpacing: '-0.01em',
+          mb: 0.75,
+          color: 'text.primary',
+        }}
+      >
         {title}
       </Typography>
 
       <Typography
         variant="body2"
-        sx={{ color: theme.palette.text.secondary, maxWidth: 440, mb: 2.5, lineHeight: 1.5 }}
+        sx={{
+          color: 'text.secondary',
+          maxWidth: 420,
+          mb: 3,
+          lineHeight: 1.65,
+        }}
       >
         {message}
       </Typography>
@@ -66,9 +92,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           variant="outlined"
           color="primary"
           size="small"
-          startIcon={<RestartAltIcon sx={{ fontSize: 16 }} />}
+          startIcon={<RestartAltIcon sx={{ fontSize: '15px !important' }} />}
           onClick={onResetFilters}
-          sx={{ fontWeight: 500, fontSize: '0.8125rem' }}
+          sx={{ fontWeight: 600, fontSize: '0.8125rem', px: 2 }}
         >
           {actionText}
         </Button>

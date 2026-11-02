@@ -5,6 +5,7 @@ import {
   getEmployeesQuerySchema,
   getEmployeeByIdParamsSchema,
   createEmployeeBodySchema,
+  updateEmployeeBodySchema,
 } from '../schemas/employee.schema';
 
 const router = Router();
@@ -23,9 +24,26 @@ router.post(
 );
 
 router.get(
+  '/export',
+  controller.exportEmployees
+);
+
+router.get(
   '/:id',
   validateRequest({ params: getEmployeeByIdParamsSchema }),
   controller.getEmployeeById
+);
+
+router.put(
+  '/:id',
+  validateRequest({ params: getEmployeeByIdParamsSchema, body: updateEmployeeBodySchema }),
+  controller.updateEmployee
+);
+
+router.delete(
+  '/:id',
+  validateRequest({ params: getEmployeeByIdParamsSchema }),
+  controller.deleteEmployee
 );
 
 export const employeeRoutes = router;

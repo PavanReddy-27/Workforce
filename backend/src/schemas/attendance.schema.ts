@@ -13,6 +13,7 @@ export const getAttendanceQuerySchema = z
     date: isoDateSchema.optional(),
     startDate: isoDateSchema.optional(),
     endDate: isoDateSchema.optional(),
+    department: z.string().optional(),
     status: z.enum(['Present', 'Absent', 'On Leave']).optional(),
     sortBy: z
       .enum(['id', 'employee_id', 'attendance_date', 'status', 'check_in_time', 'created_at'])

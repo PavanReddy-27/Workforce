@@ -9,6 +9,7 @@ export interface StandardSuccessResponse<T> {
     totalRecords: number;
     totalPages: number;
   };
+  summary?: unknown;
   message?: string;
   timestamp: string;
 }
@@ -35,12 +36,14 @@ export const sendSuccess = <T>(
       totalRecords: number;
       totalPages: number;
     };
+    summary?: unknown;
   }
 ): Response => {
   const payload: StandardSuccessResponse<T> = {
     success: true,
     data,
     ...(options?.pagination ? { pagination: options.pagination } : {}),
+    ...(options?.summary !== undefined ? { summary: options.summary } : {}),
     ...(options?.message ? { message: options.message } : {}),
     timestamp: new Date().toISOString(),
   };

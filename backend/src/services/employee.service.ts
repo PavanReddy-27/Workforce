@@ -39,4 +39,15 @@ export class EmployeeService {
   public createEmployee(data: Parameters<EmployeeRepository['create']>[0]): EmployeeWithDepartment {
     return this.employeeRepo.create(data);
   }
+
+  public updateEmployee(
+    id: number | string,
+    data: Parameters<EmployeeRepository['update']>[1]
+  ): EmployeeWithDepartment {
+    return this.employeeRepo.update(id, data);
+  }
+
+  public deleteEmployee(id: number | string): boolean {
+    return this.employeeRepo.delete(id);
+  }
 }

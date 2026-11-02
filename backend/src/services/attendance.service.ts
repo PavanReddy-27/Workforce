@@ -3,12 +3,17 @@ import type {
   AttendanceWithEmployee,
   AttendanceFilterOptions,
   PaginatedResult,
+  AttendanceSummary,
 } from '../types';
+
+export interface AttendanceServiceResult extends PaginatedResult<AttendanceWithEmployee> {
+  summary: AttendanceSummary;
+}
 
 export class AttendanceService {
   constructor(private readonly attendanceRepo: AttendanceRepository = new AttendanceRepository()) {}
 
-  public getAttendance(options: AttendanceFilterOptions): PaginatedResult<AttendanceWithEmployee> {
+  public getAttendance(options: AttendanceFilterOptions): AttendanceServiceResult {
     const page = Math.max(1, options.page || 1);
     const limit = Math.min(100, Math.max(1, options.limit || 50));
 
@@ -16,7 +21,7 @@ export class AttendanceService {
       throw new Error('startDate cannot be after endDate');
     }
 
-    const { records, total } = this.attendanceRepo.findAll({
+    const { records, total, summary } = this.attendanceRepo.findAll({
       ...options,
       page,
       limit,
@@ -32,6 +37,7 @@ export class AttendanceService {
         totalRecords: total,
         totalPages,
       },
+      summary,
     };
   }
 }

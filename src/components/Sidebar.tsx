@@ -285,20 +285,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 width: 32,
                 height: 32,
                 fontSize: '0.8125rem',
-                fontWeight: 600,
-                backgroundColor: isDark ? '#334155' : '#E2E8F0',
-                color: theme.palette.text.primary,
+                fontWeight: 700,
+                background: isDark
+                  ? 'linear-gradient(135deg, #3B82F6, #6366F1)'
+                  : 'linear-gradient(135deg, #DBEAFE, #EDE9FE)',
+                color: isDark ? '#FFFFFF' : '#3B82F6',
               }}
             >
-              PR
+              UK
             </Avatar>
             {(!collapsed || isMobile) && (
               <Box sx={{ overflow: 'hidden' }}>
-                <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 500, lineHeight: 1.3 }}>
-                  Pavan Reddy
+                <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.3, color: 'text.primary' }}>
+                  Uday Kumar R
                 </Typography>
                 <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary, lineHeight: 1.3 }}>
-                  Developer
+                  WFA Developer
                 </Typography>
               </Box>
             )}

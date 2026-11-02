@@ -12,6 +12,7 @@ export class AttendanceController {
 
     sendSuccess(res, result.data, 200, {
       pagination: result.pagination,
+      summary: result.summary,
     });
   };
 }

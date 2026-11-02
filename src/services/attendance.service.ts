@@ -11,6 +11,7 @@ import type {
   ApiResponse,
   PaginatedResponse,
   AttendanceRecord,
+  AttendanceWithEmployee,
   AttendanceFilterParams,
 } from '../types';
 
@@ -39,7 +40,8 @@ export class AttendanceApiService implements IAttendanceService {
       date: params?.date,
       startDate: params?.startDate,
       endDate: params?.endDate,
-      status: params?.status,
+      department: params?.department && params.department !== 'All Departments' ? params.department : undefined,
+      status: params?.status && params.status !== 'All Statuses' ? params.status : undefined,
     };
 
     const res = await httpClient.get<AttendanceRecord[]>(API_ENDPOINTS.ATTENDANCE.BASE, {
@@ -47,6 +49,31 @@ export class AttendanceApiService implements IAttendanceService {
       params: queryParams,
     });
     return res as unknown as PaginatedResponse<AttendanceRecord>;
+  }
+
+  /** Alias that returns AttendanceWithEmployee records (for the Attendance page) */
+  async getAttendance(
+    params?: AttendanceFilterParams & { startDate?: string; endDate?: string },
+    options?: RequestOptions
+  ): Promise<PaginatedResponse<AttendanceWithEmployee>> {
+    const queryParams: Record<string, string | number | undefined> = {
+      page: params?.page,
+      limit: params?.limit ?? params?.pageSize,
+      sortBy: params?.sortBy,
+      sortOrder: params?.sortOrder,
+      employeeId: params?.employeeId,
+      date: params?.date,
+      startDate: params?.startDate,
+      endDate: params?.endDate,
+      department: params?.department && params.department !== 'All Departments' ? params.department : undefined,
+      status: params?.status && params.status !== 'All Statuses' ? params.status : undefined,
+    };
+
+    const res = await httpClient.get<AttendanceWithEmployee[]>(API_ENDPOINTS.ATTENDANCE.BASE, {
+      ...options,
+      params: queryParams,
+    });
+    return res as unknown as PaginatedResponse<AttendanceWithEmployee>;
   }
 
   async logAttendance(

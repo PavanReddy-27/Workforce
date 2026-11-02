@@ -4,6 +4,7 @@ import type {
   AttendanceRecord,
   AttendanceWithEmployee,
   AttendanceFilterOptions,
+  AttendanceSummary,
 } from '../types';
 
 export class AttendanceRepository {
@@ -16,6 +17,7 @@ export class AttendanceRepository {
   public findAll(options: AttendanceFilterOptions): {
     records: AttendanceWithEmployee[];
     total: number;
+    summary: AttendanceSummary;
   } {
     const {
       page = 1,
@@ -24,6 +26,7 @@ export class AttendanceRepository {
       date,
       startDate,
       endDate,
+      department,
       status,
       sortBy = 'attendance_date',
       sortOrder = 'desc',
@@ -53,6 +56,17 @@ export class AttendanceRepository {
       }
     }
 
+    if (department && department !== 'All Departments') {
+      const deptNum = Number(department);
+      if (!isNaN(deptNum)) {
+        whereClauses.push('e.department_id = ?');
+        params.push(deptNum);
+      } else {
+        whereClauses.push('LOWER(d.name) = LOWER(?)');
+        params.push(department);
+      }
+    }
+
     if (status) {
       whereClauses.push('a.status = ?');
       params.push(status);
@@ -64,10 +78,43 @@ export class AttendanceRepository {
       SELECT COUNT(*) as count
       FROM attendance a
       JOIN employees e ON a.employee_id = e.id
+      LEFT JOIN departments d ON e.department_id = d.id
       ${whereSql}
     `;
     const totalResult = this.db.prepare(countSql).get(...params) as { count: number };
     const total = totalResult.count;
+
+    const summarySql = `
+      SELECT
+        SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as presentCount,
+        SUM(CASE WHEN a.status = 'Absent' THEN 1 ELSE 0 END) as absentCount,
+        SUM(CASE WHEN a.status = 'On Leave' THEN 1 ELSE 0 END) as onLeaveCount,
+        COUNT(*) as totalCount
+      FROM attendance a
+      JOIN employees e ON a.employee_id = e.id
+      LEFT JOIN departments d ON e.department_id = d.id
+      ${whereSql}
+    `;
+    const summaryRow = this.db.prepare(summarySql).get(...params) as {
+      presentCount: number | null;
+      absentCount: number | null;
+      onLeaveCount: number | null;
+      totalCount: number;
+    } | undefined;
+
+    const present = summaryRow?.presentCount || 0;
+    const absent = summaryRow?.absentCount || 0;
+    const onLeave = summaryRow?.onLeaveCount || 0;
+    const activeRecorded = present + absent;
+    const rate = activeRecorded > 0 ? Number(((present / activeRecorded) * 100).toFixed(1)) : 0;
+
+    const summary: AttendanceSummary = {
+      present,
+      absent,
+      onLeave,
+      total: summaryRow?.totalCount || 0,
+      rate,
+    };
 
     const allowedSortFields = new Set([
       'id',
@@ -109,7 +156,7 @@ export class AttendanceRepository {
 
     const records = this.db.prepare(querySql).all(...params, limit, offset) as AttendanceWithEmployee[];
 
-    return { records, total };
+    return { records, total, summary };
   }
 
   public findById(id: number): AttendanceWithEmployee | undefined {

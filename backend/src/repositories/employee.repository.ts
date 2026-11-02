@@ -275,11 +275,104 @@ export class EmployeeRepository {
       .prepare(insertSql)
       .run(code, cleanFirst, cleanLast, email, deptId, data.location, jobTitle, status, hireDate);
 
-    const created = this.findById(Number(info.lastInsertRowid));
+    const newEmpId = Number(info.lastInsertRowid);
+    const today = new Date().toISOString().split('T')[0];
+    if (status !== 'Terminated') {
+      const attStatus = status === 'On Leave' ? 'On Leave' : 'Present';
+      const checkIn = attStatus === 'Present' ? `${today}T09:00:00Z` : null;
+      try {
+        this.db
+          .prepare(
+            `INSERT INTO attendance (employee_id, attendance_date, status, check_in_time, check_out_time)
+             VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT(employee_id, attendance_date) DO UPDATE SET status = excluded.status`
+          )
+          .run(newEmpId, today, attStatus, checkIn, null);
+      } catch {
+        // ignore duplicate or non-critical attendance insert error
+      }
+    }
+
+    const created = this.findById(newEmpId);
     if (!created) {
       throw new Error('Failed to retrieve newly created employee');
     }
     return created;
+  }
+
+  public update(
+    id: number | string,
+    data: {
+      first_name?: string;
+      last_name?: string;
+      email?: string;
+      department?: string;
+      department_name?: string;
+      department_id?: number;
+      location?: string;
+      job_title?: string;
+      employment_status?: string;
+      hire_date?: string;
+    }
+  ): EmployeeWithDepartment {
+    const existing = this.findById(id);
+    if (!existing) {
+      const err = new Error(`Employee '${id}' not found`) as Error & { statusCode: number; code: string };
+      err.statusCode = 404;
+      err.code = 'EMPLOYEE_NOT_FOUND';
+      throw err;
+    }
+
+    let deptId = data.department_id;
+    const deptInput = data.department_name || data.department;
+    if (deptInput && !deptId) {
+      const deptNum = Number(deptInput);
+      if (!isNaN(deptNum)) {
+        deptId = deptNum;
+      } else {
+        const row = this.db
+          .prepare('SELECT id FROM departments WHERE LOWER(name) = LOWER(?)')
+          .get(deptInput) as { id: number } | undefined;
+        if (row) {
+          deptId = row.id;
+        }
+      }
+    }
+
+    const setClauses: string[] = [];
+    const params: (string | number)[] = [];
+
+    if (data.first_name !== undefined) { setClauses.push('first_name = ?'); params.push(data.first_name.trim()); }
+    if (data.last_name !== undefined) { setClauses.push('last_name = ?'); params.push(data.last_name.trim()); }
+    if (data.email !== undefined) { setClauses.push('email = ?'); params.push(data.email.trim()); }
+    if (deptId !== undefined) { setClauses.push('department_id = ?'); params.push(deptId); }
+    if (data.location !== undefined) { setClauses.push('location = ?'); params.push(data.location.trim()); }
+    if (data.job_title !== undefined) { setClauses.push('job_title = ?'); params.push(data.job_title.trim()); }
+    if (data.employment_status !== undefined) { setClauses.push('employment_status = ?'); params.push(data.employment_status); }
+    if (data.hire_date !== undefined) { setClauses.push('hire_date = ?'); params.push(data.hire_date); }
+
+    setClauses.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')");
+
+    if (setClauses.length === 1) {
+      // Only updated_at — nothing to actually update
+      return existing;
+    }
+
+    const numId = typeof id === 'number' ? id : parseInt(String(id), 10);
+    params.push(numId);
+
+    this.db.prepare(`UPDATE employees SET ${setClauses.join(', ')} WHERE id = ?`).run(...params);
+
+    const updated = this.findById(numId);
+    if (!updated) throw new Error('Failed to retrieve updated employee');
+    return updated;
+  }
+
+  public delete(id: number | string): boolean {
+    const numId = typeof id === 'number' ? id : parseInt(String(id), 10);
+    if (!this.findById(numId)) return false;
+    this.db.prepare('DELETE FROM employees WHERE id = ?').run(numId);
+    return true;
   }
 }
 

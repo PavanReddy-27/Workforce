@@ -1,3 +1,4 @@
+import React from 'react';
 import { Box, Skeleton, Card } from '@mui/material';
 
 export const LoadingSkeleton: React.FC = () => {
