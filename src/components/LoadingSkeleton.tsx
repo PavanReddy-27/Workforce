@@ -18,10 +18,13 @@ export const LoadingSkeleton: React.FC = () => {
         }}
       >
         {[...Array(5)].map((_, i) => (
-          <Card key={i} sx={{ p: 2 }}>
-            <Skeleton variant="text" width="50%" height={16} sx={{ mb: 1 }} />
-            <Skeleton variant="rectangular" width="70%" height={32} sx={{ mb: 1.5, borderRadius: 1 }} />
-            <Skeleton variant="text" width="60%" height={14} />
+          <Card key={i} sx={{ p: 2.25, borderRadius: '16px' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+              <Skeleton variant="text" width="45%" height={16} />
+              <Skeleton variant="rounded" width={32} height={32} sx={{ borderRadius: '8px' }} />
+            </Box>
+            <Skeleton variant="text" width="55%" height={40} sx={{ mb: 1 }} />
+            <Skeleton variant="text" width="70%" height={14} />
           </Card>
         ))}
       </Box>

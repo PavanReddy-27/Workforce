@@ -1,7 +1,8 @@
 /**
  * KPI Card Component
- * Displays a single key performance metric with icon, value, trend badge,
- * and an optional micro progress bar for capacity-type metrics.
+ * Plain, Apple-inspired human-designed metric card.
+ * Uses neutral monochrome tones, refined typography, elegant hierarchy,
+ * and generous whitespace rather than loud multi-colored accents.
  */
 
 import React from 'react';
@@ -12,10 +13,7 @@ import {
   Typography,
   Skeleton,
   useTheme,
-  alpha,
 } from '@mui/material';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
@@ -36,14 +34,6 @@ const KPI_ICON_MAP: Record<string, React.ReactNode> = {
   'Attendance Rate': <TrendingUpIcon />,
 };
 
-const KPI_COLOR_MAP: Record<string, string> = {
-  'Total Employees': '#6366F1',
-  'Present Today': '#10B981',
-  'Absent Today': '#EF4444',
-  'On Leave': '#F59E0B',
-  'Attendance Rate': '#3B82F6',
-};
-
 /** Extract numeric percent 0–100 if the metric looks like "94.1%" */
 function parseProgressValue(metric: KpiMetric): number | null {
   if (metric.title === 'Attendance Rate') {
@@ -57,20 +47,28 @@ export const KpiCard: React.FC<KpiCardProps> = ({ metric, loading = false }) => 
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
-  const isGoodTrend = metric.isPositive ?? true;
-  const trendColor = isGoodTrend ? theme.palette.success.main : theme.palette.error.main;
-  const accentColor = KPI_COLOR_MAP[metric.title] ?? theme.palette.primary.main;
   const icon = KPI_ICON_MAP[metric.title];
   const progressValue = parseProgressValue(metric);
 
   if (loading) {
     return (
-      <Card sx={{ height: '100%', p: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-          <Skeleton variant="text" width="55%" height={16} />
-          <Skeleton variant="rounded" width={32} height={32} />
+      <Card
+        sx={{
+          height: '100%',
+          p: 2.25,
+          borderRadius: '16px',
+          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'}`,
+          backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+          boxShadow: isDark
+            ? '0 1px 3px rgba(0, 0, 0, 0.25)'
+            : '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.02)',
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
+          <Skeleton variant="text" width="45%" height={16} />
+          <Skeleton variant="rounded" width={32} height={32} sx={{ borderRadius: '8px' }} />
         </Box>
-        <Skeleton variant="text" width="45%" height={38} sx={{ mb: 1 }} />
+        <Skeleton variant="text" width="55%" height={40} sx={{ mb: 1 }} />
         <Skeleton variant="text" width="70%" height={14} />
       </Card>
     );
@@ -78,51 +76,56 @@ export const KpiCard: React.FC<KpiCardProps> = ({ metric, loading = false }) => 
 
   return (
     <Card
+      elevation={0}
       sx={{
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+        borderRadius: '16px',
+        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)'}`,
+        backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
+        boxShadow: isDark
+          ? '0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.2)'
+          : '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 6px rgba(0, 0, 0, 0.02)',
+        transition:
+          'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease',
         cursor: 'default',
         '&:hover': {
-          transform: 'translateY(-2px)',
+          transform: 'translateY(-1px)',
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.12)',
           boxShadow: isDark
-            ? '0 8px 24px rgba(0, 0, 0, 0.45)'
-            : '0 8px 24px rgba(15, 23, 42, 0.1)',
-        },
-        position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '3px',
-          background: `linear-gradient(90deg, ${accentColor}, ${alpha(accentColor, 0.4)})`,
-          borderRadius: '10px 10px 0 0',
+            ? '0 6px 18px rgba(0, 0, 0, 0.35)'
+            : '0 6px 18px rgba(0, 0, 0, 0.06)',
         },
       }}
     >
-      <CardContent sx={{ p: 2, pb: '14px !important', flexGrow: 1 }}>
-        {/* Header: title + icon badge */}
+      <CardContent
+        sx={{
+          p: 2.25,
+          pb: '18px !important',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          flexGrow: 1,
+        }}
+      >
+        {/* Header: title + subtle monochrome icon */}
         <Box
           sx={{
             display: 'flex',
-            alignItems: 'flex-start',
+            alignItems: 'center',
             justifyContent: 'space-between',
-            mb: 1.25,
+            gap: 1,
           }}
         >
           <Typography
-            variant="overline"
             sx={{
               color: theme.palette.text.secondary,
-              fontWeight: 600,
-              fontSize: '0.6875rem',
+              fontWeight: 500,
+              fontSize: '0.8125rem',
               lineHeight: 1.3,
-              letterSpacing: '0.06em',
+              letterSpacing: '-0.01em',
             }}
           >
             {metric.title}
@@ -131,17 +134,19 @@ export const KpiCard: React.FC<KpiCardProps> = ({ metric, loading = false }) => 
           {icon && (
             <Box
               sx={{
-                width: 34,
-                height: 34,
-                borderRadius: '9px',
-                backgroundColor: alpha(accentColor, isDark ? 0.2 : 0.1),
-                color: accentColor,
+                width: 32,
+                height: 32,
+                borderRadius: '8px',
+                backgroundColor: isDark
+                  ? 'rgba(255, 255, 255, 0.06)'
+                  : 'rgba(0, 0, 0, 0.035)',
+                border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'}`,
+                color: theme.palette.text.secondary,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                '& svg': { fontSize: 18 },
-                transition: 'background-color 0.2s ease',
+                '& svg': { fontSize: 17 },
               }}
             >
               {icon}
@@ -149,109 +154,88 @@ export const KpiCard: React.FC<KpiCardProps> = ({ metric, loading = false }) => 
           )}
         </Box>
 
-        {/* Primary numeric value */}
+        {/* Primary numeric value - Apple SF Pro bold tabular numbers */}
         <Typography
           sx={{
-            fontWeight: 800,
-            fontSize: { xs: '1.625rem', sm: '1.875rem' },
-            letterSpacing: '-0.03em',
+            fontWeight: 600,
+            fontSize: { xs: '1.875rem', sm: '2.125rem' },
+            letterSpacing: '-0.035em',
             color: theme.palette.text.primary,
-            lineHeight: 1.05,
+            lineHeight: 1.1,
             fontVariantNumeric: 'tabular-nums',
-            mb: progressValue !== null ? 1.25 : 1,
+            mt: 1.5,
+            mb: progressValue !== null ? 1 : 0.75,
           }}
         >
           {metric.value}
         </Typography>
 
-        {/* Progress bar (only for rate-type metrics) */}
+        {/* Apple-style thin monochrome progress bar (for Attendance Rate) */}
         {progressValue !== null && (
-          <Box sx={{ mb: 1, position: 'relative' }}>
+          <Box sx={{ mb: 1.25 }}>
             <Box
               sx={{
-                height: 5,
-                borderRadius: 3,
+                height: 4,
+                borderRadius: 2,
                 backgroundColor: isDark
-                  ? 'rgba(148, 163, 184, 0.12)'
-                  : 'rgba(15, 23, 42, 0.07)',
+                  ? 'rgba(255, 255, 255, 0.09)'
+                  : 'rgba(0, 0, 0, 0.06)',
                 overflow: 'hidden',
               }}
             >
               <Box
                 sx={{
                   height: '100%',
-                  borderRadius: 3,
+                  borderRadius: 2,
                   width: `${progressValue}%`,
-                  background: `linear-gradient(90deg, ${accentColor}, ${alpha(accentColor, 0.7)})`,
-                  transition: 'width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                  backgroundColor: isDark ? '#F1F5F9' : '#0F172A',
+                  transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
               />
             </Box>
           </Box>
         )}
 
-        {/* Trend badge + period */}
-        {metric.change !== undefined ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-            <Box
+        {/* Footer: context / subtitle and clean change indicator */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            mt: 'auto',
+            pt: 0.5,
+            gap: 1,
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: '0.75rem',
+              color: theme.palette.text.secondary,
+              fontWeight: 400,
+              lineHeight: 1.3,
+            }}
+          >
+            {metric.subtitle || metric.period}
+          </Typography>
+
+          {metric.change !== undefined && (
+            <Typography
+              component="span"
               sx={{
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                color: theme.palette.text.secondary,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 0.25,
-                color: trendColor,
-                fontSize: '0.7rem',
-                fontWeight: 700,
-                backgroundColor: alpha(trendColor, 0.1),
-                borderRadius: '4px',
-                px: 0.75,
-                py: 0.2,
+                fontVariantNumeric: 'tabular-nums',
+                flexShrink: 0,
               }}
             >
-              {metric.change >= 0 ? (
-                <ArrowUpwardIcon sx={{ fontSize: 11 }} />
-              ) : (
-                <ArrowDownwardIcon sx={{ fontSize: 11 }} />
-              )}
-              {Math.abs(metric.change)}%
-            </Box>
-            {metric.period && (
-              <Typography
-                variant="caption"
-                sx={{
-                  color: theme.palette.text.secondary,
-                  fontWeight: 400,
-                  fontSize: '0.6875rem',
-                }}
-              >
-                {metric.period}
-              </Typography>
-            )}
-          </Box>
-        ) : metric.period ? (
-          <Typography
-            variant="caption"
-            sx={{ color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.6875rem' }}
-          >
-            {metric.period}
-          </Typography>
-        ) : null}
-
-        {/* Subtitle */}
-        {metric.subtitle && (
-          <Typography
-            variant="caption"
-            sx={{
-              display: 'block',
-              color: theme.palette.text.secondary,
-              fontSize: '0.6875rem',
-              mt: 0.5,
-              opacity: 0.85,
-              lineHeight: 1.4,
-            }}
-          >
-            {metric.subtitle}
-          </Typography>
-        )}
+              {metric.change >= 0 ? '+' : ''}{metric.change}%
+            </Typography>
+          )}
+        </Box>
       </CardContent>
     </Card>
   );
