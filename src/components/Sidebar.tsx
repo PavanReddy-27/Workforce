@@ -291,12 +291,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 color: isDark ? '#FFFFFF' : '#3B82F6',
               }}
             >
-              UK
+              PR
             </Avatar>
             {(!collapsed || isMobile) && (
               <Box sx={{ overflow: 'hidden' }}>
                 <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.3, color: 'text.primary' }}>
-                  Uday Kumar R
+                  Pavan Reddy
                 </Typography>
                 <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary, lineHeight: 1.3 }}>
                   WFA Developer
