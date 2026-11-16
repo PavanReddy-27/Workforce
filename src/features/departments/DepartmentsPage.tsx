@@ -4,7 +4,7 @@
  * Uses GET /api/departments and GET /api/dashboard/distribution.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -29,6 +29,13 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { dashboardService } from '../../services';
 import { EmployeeTable } from '../employees';
+
+interface DepartmentsPageProps {
+  department: string;
+  onDepartmentChange: (department: string) => void;
+  dataRefreshTrigger: number;
+  onDataChanged: () => void;
+}
 
 const DEPT_COLORS: Record<string, string> = {
   'Engineering': '#6366F1',
@@ -59,7 +66,12 @@ interface DeptData {
   percentage: number;
 }
 
-export const DepartmentsPage: React.FC = () => {
+export const DepartmentsPage: React.FC<DepartmentsPageProps> = ({
+  department,
+  onDepartmentChange,
+  dataRefreshTrigger,
+  onDataChanged,
+}) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -68,10 +80,14 @@ export const DepartmentsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [selectedDept, setSelectedDept] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const selectedDept = department === 'All Departments' ? null : department;
 
-  const fetchData = async () => {
+  const handleDepartmentSelect = (name: string) => {
+    onDepartmentChange(selectedDept === name ? 'All Departments' : name);
+  };
+
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -87,11 +103,11 @@ export const DepartmentsPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, [refreshTrigger]);
+  }, [fetchData, refreshTrigger, dataRefreshTrigger]);
 
   const filtered = departments.filter((d) =>
     d.departmentName.toLowerCase().includes(search.toLowerCase())
@@ -223,7 +239,7 @@ export const DepartmentsPage: React.FC = () => {
               return (
                 <Grid key={dept.departmentId} size={{ xs: 12, sm: 6, lg: 4 }}>
                   <Card
-                    onClick={() => setSelectedDept(isSelected ? null : dept.departmentName)}
+                    onClick={() => handleDepartmentSelect(dept.departmentName)}
                     sx={{
                       borderRadius: '8px',
                       height: '100%',
@@ -347,7 +363,7 @@ export const DepartmentsPage: React.FC = () => {
             <Typography variant="h6" sx={{ fontWeight: 700, fontSize: '1.05rem' }}>
               {selectedDept} Team Members
             </Typography>
-            <Button size="small" variant="text" onClick={() => setSelectedDept(null)} sx={{ textTransform: 'none' }}>
+            <Button size="small" variant="text" onClick={() => onDepartmentChange('All Departments')} sx={{ textTransform: 'none' }}>
               Close Members List
             </Button>
           </Box>
@@ -355,6 +371,9 @@ export const DepartmentsPage: React.FC = () => {
             title={`${selectedDept} Department Directory`}
             subtitle={`Live SQLite database records for employees in ${selectedDept}`}
             initialDepartment={selectedDept}
+            onDepartmentChange={onDepartmentChange}
+            refreshTrigger={dataRefreshTrigger}
+            onDataChanged={onDataChanged}
           />
         </Box>
       )}

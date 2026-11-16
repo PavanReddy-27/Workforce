@@ -56,8 +56,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   manager: [
     'dashboard:view',
+    'employees:read_all',
     'employees:read_dept',
     'employees:read_own',
+    'attendance:read_all',
     'attendance:read_dept',
     'attendance:read_own',
     'departments:read',

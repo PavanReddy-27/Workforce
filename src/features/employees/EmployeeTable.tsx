@@ -58,6 +58,8 @@ export interface EmployeeTableProps {
   initialStatus?: string;
   searchQuery?: string;
   refreshTrigger?: number;
+  onDataChanged?: () => void;
+  onDepartmentChange?: (department: string) => void;
   title?: string;
   subtitle?: string;
 }
@@ -68,6 +70,8 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   initialStatus,
   searchQuery,
   refreshTrigger: externalRefreshTrigger,
+  onDataChanged,
+  onDepartmentChange,
   title = 'Employee Directory',
   subtitle = 'Database-backed employee records with server-side pagination, search, and sorting',
 }) => {
@@ -174,7 +178,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [externalRefreshTrigger]);
 
   // Debounce search input (300ms) and reset page to 0
   useEffect(() => {
@@ -189,6 +193,7 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
   const handleDepartmentChange = (val: string) => {
     setDepartment(val);
     setPage(0);
+    onDepartmentChange?.(val);
   };
 
   const handleLocationChange = (val: string) => {
@@ -762,12 +767,14 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
             setEmployees((prev) => prev.map((e) => e.id === updated.id ? updated : e));
             setDetailOpen(false);
             setSelectedEmployee(null);
+            onDataChanged?.();
           }}
           onDeleted={(id) => {
             setEmployees((prev) => prev.filter((e) => e.id !== id));
             setTotalRecords((prev) => Math.max(0, prev - 1));
             setDetailOpen(false);
             setSelectedEmployee(null);
+            onDataChanged?.();
           }}
         />
 

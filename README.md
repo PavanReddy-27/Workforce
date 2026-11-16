@@ -37,13 +37,13 @@ The **Workforce Analytics Platform (WFA)** delivers secure, role-differentiated 
 | Permission Capability | Admin | HR | Manager | Team Lead | Employee |
 |---|:---:|:---:|:---:|:---:|:---:|
 | **View Telemetry Dashboard** | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **View All Employees Directory** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **View All Employees Directory** | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **View Department / Team Staff** | ✅ | ✅ | ✅ | ✅ | ❌ |
 | **View Own Employee Profile** | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Onboard New Employee** | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **Update Employee Record** | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **Delete Employee Record** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **View All Attendance Records** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **View All Attendance Records** | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **View Department Attendance** | ✅ | ✅ | ✅ | ✅ | ❌ |
 | **View Own Attendance History** | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Manage Attendance Records** | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -54,12 +54,11 @@ The **Workforce Analytics Platform (WFA)** delivers secure, role-differentiated 
 | **Active Sessions Governance** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Personal Security Settings** | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-Manager and Team Lead directory, attendance, and dashboard data are restricted
-to the department linked to their employee profile. The current data model does
-not define team membership, so Team Lead scope is department-level. Employee
-records, attendance, and dashboard aggregates are limited to the employee's
-linked profile. API authorization is enforced independently of the frontend
-navigation and ignores broader scope filters supplied by the caller.
+Managers can view employees, attendance, department distribution, and dashboard
+data across all departments. Team Leads remain department-scoped because the
+current data model does not define team membership. Employee records,
+attendance, and dashboard aggregates are limited to the employee's linked
+profile. API authorization is enforced independently of frontend navigation.
 
 ---
 
@@ -71,7 +70,7 @@ The system comes pre-seeded with 5 accounts covering each RBAC role for testing 
 |---|---|---|---|
 | 👑 **Admin** | `admin@workforce.com` | `Admin@123456` | System Administrator — Full access, User Management, Audit Logs, Sessions |
 | 💼 **HR Specialist** | `hr@workforce.com` | `Hr@123456` | Amara Okafor (VP of Global Talent) — Directory, Onboarding, CSV Export |
-| 📊 **Manager** | `manager@workforce.com` | `Manager@123456` | Marcus Chen (Director of Product) — Department Staff Roster & Attendance |
+| 📊 **Manager** | `manager@workforce.com` | `Manager@123456` | Marcus Chen (Director of Product) — Company-wide Employee Directory, Attendance & Analytics |
 | 🚀 **Team Lead** | `lead@workforce.com` | `Lead@123456` | Zainab Al-Mansoor (Frontend Architect) — Team Presence & Directory |
 | 👤 **Employee** | `employee@workforce.com` | `Employee@123456` | Sarah Jenkins (Staff ML Engineer) — Self Dashboard & Personal Attendance |
 

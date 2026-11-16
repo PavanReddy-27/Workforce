@@ -64,14 +64,15 @@ navigation item in the frontend does not grant or deny API access.
 |---|---|---|---|---|
 | Admin | All employees | All attendance | Create, update, delete | User management, audit logs, sessions, exports |
 | HR | All employees | All attendance | Create and update | Exports |
-| Manager | Linked department | Linked department | Read only | Department-scoped dashboard |
+| Manager | All departments | All departments | Read only | Company-wide dashboard |
 | Team Lead | Linked department | Linked department | Read only | Department-scoped dashboard |
 | Employee | Own linked profile | Own attendance | Read own profile | Personal dashboard and security settings |
 
-Manager and Team Lead scope is the department linked to the account because the
-current schema does not model team membership. Employee and department filters
-provided in requests cannot expand the authenticated user's scope. Scoped
-accounts without a linked employee profile receive `403 FORBIDDEN`.
+Manager employee, attendance, department-distribution, and dashboard access
+spans all departments. Team Leads remain department-scoped because the current
+schema does not model team membership. Employee and department filters cannot
+expand scoped users' permissions. Scoped accounts without a linked employee
+profile receive `403 FORBIDDEN`.
 
 ---
 
@@ -103,8 +104,8 @@ Checks server availability, uptime, and database connectivity.
 ### `GET /api/dashboard/summary`
 Calculates the 5 primary KPI cards for the selected date and filters.
 
-The results are scoped to the authenticated user's linked department or employee
-profile. Admin and HR accounts can query company-wide data.
+The results are scoped to the authenticated user's linked department or
+employee profile. Admin, HR, and Manager accounts can query company-wide data.
 
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |
@@ -238,9 +239,10 @@ Results use the authenticated user's scope; filters cannot expand it.
 ### `GET /api/employees`
 Lists paginated employee records supporting server-side searching, multi-field filtering, and bidirectional sorting.
 
-Admin and HR can read all employees, Manager and Team Lead are restricted to
-their linked department, and Employee accounts can read only their own linked
-profile. Caller-supplied department filters never expand this scope.
+Admin, HR, and Manager can read employees across all departments. Team Leads
+are restricted to their linked department, and Employee accounts can read only
+their own linked profile. Caller-supplied department filters never expand this
+scope.
 
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |
@@ -468,8 +470,8 @@ Exports all employee records as a standard UTF-8 RFC 4180 CSV file with `Content
 ### `GET /api/departments`
 Lists all active organizational departments.
 
-Manager, Team Lead, and Employee accounts receive only their linked department.
-Admin and HR accounts receive the full department list.
+Manager, Admin, and HR accounts receive the full department list. Team Lead and
+Employee accounts receive only their linked department.
 
 **Response (HTTP 200)**:
 ```json
@@ -502,8 +504,9 @@ Admin and HR accounts receive the full department list.
 ### `GET /api/attendance`
 Retrieves paginated daily attendance records.
 
-Admin and HR can read all attendance, Manager and Team Lead are restricted to
-their linked department, and Employee accounts can read only their own records.
+Admin, HR, and Manager can read attendance across all departments. Team Leads
+are restricted to their linked department, and Employee accounts can read only
+their own records.
 
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |

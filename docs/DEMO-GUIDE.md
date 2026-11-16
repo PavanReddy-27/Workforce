@@ -76,6 +76,7 @@ Examine the top row of metrics:
 1. In the filter bar below the KPI cards, click the **Department** dropdown and select **Customer Success**.
 2. Notice the KPI cards update to reflect Customer Success metrics immediately.
 3. Try Location, Employment Status, and date-range filters; click **Reset Filters** to return to the baseline.
+4. Choose a department in the employee directory or click a department card. The selected department is shared with Overview and Attendance, and each directory/attendance result stays limited to that department. Use **All Departments** or **Reset Filters** to clear it.
 
 ### Step 5: Employee Directory Data Table (2 Minutes)
 Scroll down to the **Employee Directory** table:
@@ -99,11 +100,11 @@ Scroll down to the **Employee Directory** table:
    - Role: `Senior Cloud Architect`
    - Location: enter a location
 3. Click **Initiate Onboarding**.
-4. Observe the confirmation snackbar, the employee table updating with Alexander Wright, and the KPI card total headcount incrementing!
+4. Observe the confirmation snackbar and employee table updating. The overview KPIs/charts, department headcounts, and attendance view refresh from SQLite immediately after an in-app change, when returning to the app, and every 15 seconds while the app is visible.
 
 ### Step 7: Authentication, roles, and security (2 Minutes)
 1. As Admin, open **User Accounts**, **Audit Logs**, and **Active Sessions** to demonstrate administrative controls and recorded authentication events.
-2. Log out and sign in as the Employee demo account. Confirm that the dashboard is scoped to the employee and admin-only navigation is absent.
+2. Log out and sign in as the Manager demo account. Confirm the directory, attendance, department breakdown, and overview cover all departments. Switch to the Employee demo account and confirm that the dashboard is scoped to that employee and admin-only navigation is absent.
 3. While signed in as Employee, open `http://localhost:5173/users` directly. The protected route must display the access-denied state; API permissions are enforced independently on the backend.
 4. To demonstrate MFA, use a test account to set up an authenticator from **Platform Settings**. Scan the QR code, confirm with a current code, and save the one-time backup codes. Never use a real employee's MFA secret for a presentation.
 5. To demonstrate lockout safely, use a disposable seeded/test account and enter a wrong password five times. Confirm subsequent login is rejected until the lockout expires or test data is reset.

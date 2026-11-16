@@ -59,6 +59,8 @@ interface AttendancePageProps {
   dashboardLoading: boolean;
   onDepartmentChange: (department: string) => void;
   onClearDashboardFilters: () => void;
+  dataRefreshTrigger: number;
+  onDataChanged: () => void;
 }
 
 function getDefaultDateRange() {
@@ -77,6 +79,8 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
   dashboardLoading,
   onDepartmentChange,
   onClearDashboardFilters,
+  dataRefreshTrigger,
+  onDataChanged,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
@@ -135,7 +139,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
     return () => {
       active = false;
     };
-  }, []);
+  }, [dataRefreshTrigger]);
 
   const fetchRecords = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort();
@@ -198,7 +202,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 
   useEffect(() => {
     fetchRecords();
-  }, [fetchRecords, refreshTrigger]);
+  }, [fetchRecords, refreshTrigger, dataRefreshTrigger]);
 
   const handleSort = (field: string) => {
     const isAsc = sortBy === field && sortOrder === 'asc';
@@ -307,7 +311,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
           Attendance Management
         </Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-          Attendance snapshot matches Overview; use the date range below to filter attendance records.
+          Attendance snapshot matches Overview and refreshes after changes and every 15 seconds.
         </Typography>
       </Box>
 
@@ -588,8 +592,8 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
         open={detailOpen}
         employee={selectedEmployee}
         onClose={() => setDetailOpen(false)}
-        onUpdated={() => fetchRecords()}
-        onDeleted={() => fetchRecords()}
+        onUpdated={onDataChanged}
+        onDeleted={onDataChanged}
       />
     </Box>
   );

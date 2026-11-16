@@ -387,7 +387,7 @@ describe('Authentication & RBAC Integration Tests', () => {
       expect(adminAttempt.status).toBe(200);
     });
 
-    it('limits employee and manager reads to their linked employee or department', async () => {
+    it('limits employee reads while allowing managers to view employees across departments', async () => {
       const employeeLogin = await request(app)
         .post('/api/auth/login')
         .send({ email: 'employee@workforce.com', password: 'Employee@123456' });
@@ -424,16 +424,61 @@ describe('Authentication & RBAC Integration Tests', () => {
         .set('Authorization', `Bearer ${managerToken}`);
       const departmentId = managerProfile.body.data.employee_details.department_id as number;
 
-      expect(managerProfile.body.data.permissions.includes('attendance:read_all')).toBe(false);
+      expect(managerProfile.body.data.permissions.includes('employees:read_all')).toBe(true);
+      expect(managerProfile.body.data.permissions.includes('attendance:read_all')).toBe(true);
+      const managerDistribution = await request(app)
+        .get('/api/dashboard/distribution')
+        .set('Authorization', `Bearer ${managerToken}`);
+      expect(managerDistribution.status).toBe(200);
+      expect(managerDistribution.body.data.byDepartment.length).toBe(6);
+      expect(managerDistribution.body.data.totalEmployees).toBe(30);
+
       const managerList = await request(app)
-        .get('/api/employees?department=1')
+        .get('/api/employees?limit=100')
         .set('Authorization', `Bearer ${managerToken}`);
       expect(managerList.status).toBe(200);
+      expect(managerList.body.pagination.totalRecords).toBe(30);
+      expect(new Set(managerList.body.data.map((employee: { department_id: number }) => employee.department_id)).size).toBeGreaterThan(1);
+
+      const otherDepartmentEmployee = managerList.body.data.find(
+        (employee: { department_id: number }) => employee.department_id !== departmentId
+      );
+      expect(otherDepartmentEmployee).toBeDefined();
+      const otherEmployeeResponse = await request(app)
+        .get(`/api/employees/${otherDepartmentEmployee.id}`)
+        .set('Authorization', `Bearer ${managerToken}`);
+      expect(otherEmployeeResponse.status).toBe(200);
+      expect(otherEmployeeResponse.body.data.department_id).not.toBe(departmentId);
+
+      const managerDepartments = await request(app)
+        .get('/api/departments')
+        .set('Authorization', `Bearer ${managerToken}`);
+      expect(managerDepartments.status).toBe(200);
+      expect(managerDepartments.body.data.length).toBe(6);
+
+      const managerLocations = await request(app)
+        .get('/api/employees/locations')
+        .set('Authorization', `Bearer ${managerToken}`);
+      expect(managerLocations.status).toBe(200);
+      expect(new Set(managerList.body.data.map((employee: { location: string }) => employee.location)).size)
+        .toBe(managerLocations.body.data.length);
+
+      const managerAttendance = await request(app)
+        .get(`/api/attendance?employeeId=${otherDepartmentEmployee.id}&limit=100`)
+        .set('Authorization', `Bearer ${managerToken}`);
+      expect(managerAttendance.status).toBe(200);
+      expect(managerAttendance.body.data.length).toBeGreaterThan(0);
       expect(
-        managerList.body.data.every(
-          (employee: { department_id: number }) => employee.department_id === departmentId
+        managerAttendance.body.data.every(
+          (record: { employee_id: number }) => record.employee_id === otherDepartmentEmployee.id
         )
       ).toBe(true);
+
+      const managerSummary = await request(app)
+        .get('/api/dashboard/summary')
+        .set('Authorization', `Bearer ${managerToken}`);
+      expect(managerSummary.status).toBe(200);
+      expect(managerSummary.body.data.totalEmployees).toBe(30);
     });
   });
 

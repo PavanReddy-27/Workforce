@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   ThemeProvider,
   CssBaseline,
@@ -156,7 +156,7 @@ const AuthenticatedAppContent: React.FC<{
   // Dialog & Notification feedback states
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error' | 'info' | 'warning'>('success');
-  const [tableRefreshKey, setTableRefreshKey] = useState<number>(0);
+  const [workforceRefreshKey, setWorkforceRefreshKey] = useState<number>(0);
   const [newHireDialogOpen, setNewHireDialogOpen] = useState<boolean>(false);
   const [newHireForm, setNewHireForm] = useState({
     name: '',
@@ -211,6 +211,29 @@ const AuthenticatedAppContent: React.FC<{
     partialErrors,
     refetch,
   } = useDashboardData(filters);
+
+  const handleWorkforceDataChanged = useCallback(() => {
+    setWorkforceRefreshKey((prev) => prev + 1);
+    refetch();
+  }, [refetch]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        handleWorkforceDataChanged();
+      }
+    };
+
+    const intervalId = window.setInterval(refreshWhenVisible, 15_000);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    window.addEventListener('focus', refreshWhenVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      window.removeEventListener('focus', refreshWhenVisible);
+    };
+  }, [handleWorkforceDataChanged]);
 
   const handleExport = async () => {
     try {
@@ -295,8 +318,7 @@ const AuthenticatedAppContent: React.FC<{
       if (res.success) {
         setSnackbarSeverity('success');
         setSnackbarMessage(`Successfully added ${fullName} to ${newHireForm.department}.`);
-        refetch();
-        setTableRefreshKey((prev) => prev + 1);
+        handleWorkforceDataChanged();
       } else {
         setSnackbarSeverity('error');
         setSnackbarMessage(`Failed to create employee: ${res.message || 'Unknown error'}`);
@@ -326,7 +348,16 @@ const AuthenticatedAppContent: React.FC<{
             />
           );
         }
-        return <EmployeeTable refreshTrigger={tableRefreshKey} />;
+        return (
+          <EmployeeTable
+            initialDepartment={filters.department}
+            onDepartmentChange={(department) =>
+              setFilters((prev) => ({ ...prev, department }))
+            }
+            refreshTrigger={workforceRefreshKey}
+            onDataChanged={handleWorkforceDataChanged}
+          />
+        );
 
       case 'attendance':
         if (!hasPermission('attendance:read_all') && !hasPermission('attendance:read_dept') && !hasPermission('attendance:read_own')) {
@@ -346,6 +377,8 @@ const AuthenticatedAppContent: React.FC<{
               setFilters((prev) => ({ ...prev, department }))
             }
             onClearDashboardFilters={handleResetAllFilters}
+            dataRefreshTrigger={workforceRefreshKey}
+            onDataChanged={handleWorkforceDataChanged}
           />
         );
 
@@ -358,7 +391,16 @@ const AuthenticatedAppContent: React.FC<{
             />
           );
         }
-        return <DepartmentsPage />;
+        return (
+          <DepartmentsPage
+            department={filters.department}
+            onDepartmentChange={(department) =>
+              setFilters((prev) => ({ ...prev, department }))
+            }
+            dataRefreshTrigger={workforceRefreshKey}
+            onDataChanged={handleWorkforceDataChanged}
+          />
+        );
 
       case 'users':
         if (!hasPermission('users:manage')) {
@@ -514,7 +556,11 @@ const AuthenticatedAppContent: React.FC<{
                     initialDepartment={filters.department}
                     initialLocation={filters.location}
                     initialStatus={filters.employmentType}
-                    refreshTrigger={tableRefreshKey}
+                    onDepartmentChange={(department) =>
+                      setFilters((prev) => ({ ...prev, department }))
+                    }
+                    refreshTrigger={workforceRefreshKey}
+                    onDataChanged={handleWorkforceDataChanged}
                   />
                 </Box>
               )}
@@ -576,7 +622,7 @@ const AuthenticatedAppContent: React.FC<{
             role === 'employee'
               ? `Welcome back, ${user?.username}! Here is your attendance and schedule summary.`
               : role === 'manager'
-                ? 'Review workforce and attendance trends for your department.'
+                ? 'Review company-wide workforce and attendance trends.'
                 : role === 'team_lead'
                   ? 'Review your department roster and team attendance trends.'
                   : role === 'hr'
@@ -660,7 +706,7 @@ const AuthenticatedAppContent: React.FC<{
                       sx={{ fontWeight: 600, fontSize: '0.75rem', height: 26 }}
                     />
                     <Chip
-                      label="Live Data"
+                      label="Auto-updating · 15s"
                       size="small"
                       color="success"
                       sx={{ fontWeight: 600, fontSize: '0.75rem', height: 26 }}
