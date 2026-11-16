@@ -86,8 +86,8 @@ Each requirement is evaluated and classified under one of four statuses:
 | **QA-04** | **Input Bounds & Security Hardening**: Zod schemas enforce string length bounds and regex formats. | Verified in `employee.schema.ts`, `attendance.schema.ts`, and `dashboard.schema.ts`. | **Verified complete** |
 | **QA-05** | **Department Request Deduplication**: 60-second in-memory cache and inflight promise sharing. | Verified in `DepartmentApiService` and live E2E integration test. | **Verified complete** |
 | **QA-06** | **Edge-Case & Constraint Testing**: Automated tests for empty database, wildcards, 404s, and duplicate keys. | Verified in `repositories.test.ts` and `e2eIntegration.test.ts`. | **Verified complete** |
-| **QA-07** | **Backend Test Suite (55 Tests)**: Unit, repository, controller, and route tests pass. | Ran `npm run server:test` — 55/55 passed (883ms). | **Verified complete** |
-| **QA-08** | **Frontend & Integration Test Suite (23 Tests)**: E2E and service transform tests pass. | Ran `npm test` — 23/23 passed (457ms). | **Verified complete** |
+| **QA-07** | **Backend Test Suite (84 Tests)**: Unit, repository, controller, route, authentication, and security tests pass. | Ran `npm run server:test` — 84/84 passed. | **Verified complete** |
+| **QA-08** | **Frontend & Integration Test Suite (27 Tests)**: Unit, service, and live frontend-service-to-backend E2E tests pass. | Ran `npm test` — 27/27 passed. | **Verified complete** |
 | **QA-09** | **ESLint & TypeScript Verification**: Zero compilation errors and zero lint warnings. | Ran `npm run lint` — 0 errors, 0 warnings. | **Verified complete** |
 | **QA-10** | **Production Bundle Verification**: Frontend and backend production builds compile cleanly. | Ran `npm run build` (567ms) and `npm run server:build` (2.1s) — 0 errors. | **Verified complete** |
 

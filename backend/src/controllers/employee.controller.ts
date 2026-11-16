@@ -2,21 +2,40 @@ import type { Request, Response } from 'express';
 import { EmployeeService } from '../services/employee.service';
 import { sendSuccess, sendError } from '../utils/response';
 import type { GetEmployeesQuery, CreateEmployeeBody, UpdateEmployeeBody } from '../schemas/employee.schema';
+import { getUserDataScope } from '../middleware/auth.middleware';
 
 export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService = new EmployeeService()) {}
 
   public getEmployees = (req: Request, res: Response): void => {
     const query = req.query as unknown as GetEmployeesQuery;
-    const result = this.employeeService.getEmployees(query);
+    const scope = req.user ? getUserDataScope(req.user) : null;
+    if (!scope) {
+      sendError(res, 403, 'FORBIDDEN', 'Your account must be linked to an employee record to access workforce data.');
+      return;
+    }
+    const result = this.employeeService.getEmployees({
+      ...query,
+      ...(scope.employeeId !== undefined ? { employeeId: scope.employeeId } : {}),
+      ...(scope.departmentId !== undefined ? { department: String(scope.departmentId) } : {}),
+    });
 
     sendSuccess(res, result.data, 200, {
       pagination: result.pagination,
     });
   };
 
-  public getLocations = (_req: Request, res: Response): void => {
-    sendSuccess(res, this.employeeService.getLocations());
+  public getLocations = (req: Request, res: Response): void => {
+    const scope = req.user ? getUserDataScope(req.user) : null;
+    if (!scope) {
+      sendError(res, 403, 'FORBIDDEN', 'Your account must be linked to an employee record to access workforce data.');
+      return;
+    }
+    const locations = this.employeeService.getLocations({
+      ...(scope.employeeId !== undefined ? { employeeId: scope.employeeId } : {}),
+      ...(scope.departmentId !== undefined ? { department: String(scope.departmentId) } : {}),
+    });
+    sendSuccess(res, locations);
   };
 
   public getEmployeeById = (req: Request, res: Response): void => {
@@ -24,6 +43,16 @@ export class EmployeeController {
     const employee = this.employeeService.getEmployeeById(id);
 
     if (!employee) {
+      sendError(res, 404, 'EMPLOYEE_NOT_FOUND', `Employee with ID '${id}' was not found`);
+      return;
+    }
+
+    const scope = req.user ? getUserDataScope(req.user) : null;
+    if (
+      !scope ||
+      (scope.employeeId !== undefined && employee.id !== scope.employeeId) ||
+      (scope.departmentId !== undefined && employee.department_id !== scope.departmentId)
+    ) {
       sendError(res, 404, 'EMPLOYEE_NOT_FOUND', `Employee with ID '${id}' was not found`);
       return;
     }

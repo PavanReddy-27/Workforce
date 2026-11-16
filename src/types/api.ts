@@ -1,6 +1,5 @@
 /**
  * API Contracts & Response Standards
- * Standard envelope used across all backend REST endpoints in Sprint 2.
  */
 
 export interface ApiResponse<T> {

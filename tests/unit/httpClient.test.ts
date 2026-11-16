@@ -117,4 +117,69 @@ describe('HttpClient Unit Tests', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('settles concurrent requests and clears the session when token refresh fails', async () => {
+    const originalFetch = globalThis.fetch;
+    let protectedRequestCount = 0;
+    let resolveProtectedRequests: ((response: Response) => void) | undefined;
+    const protectedRequestsReady = new Promise<Response>((resolve) => {
+      resolveProtectedRequests = resolve;
+    });
+    const expiredResponse = () => ({
+      ok: false,
+      status: 401,
+      statusText: 'Unauthorized',
+      clone: () => ({
+        json: async () => ({
+          success: false,
+          error: { code: 'TOKEN_EXPIRED', message: 'Access token has expired' },
+        }),
+      }),
+      json: async () => ({
+        success: false,
+        error: { code: 'TOKEN_EXPIRED', message: 'Access token has expired' },
+      }),
+    }) as unknown as Response;
+
+    globalThis.fetch = async (input) => {
+      if (String(input).includes('/auth/refresh')) {
+        return {
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          json: async () => ({ success: false }),
+        } as unknown as Response;
+      }
+
+      protectedRequestCount += 1;
+      if (protectedRequestCount === 2) {
+        resolveProtectedRequests?.(expiredResponse());
+      }
+      return protectedRequestsReady;
+    };
+
+    try {
+      const client = new HttpClient('http://localhost:3000/api');
+      client.setTokens('expired-access', 'invalid-refresh');
+      let sessionExpiredCount = 0;
+      client.onSessionExpired(() => {
+        sessionExpiredCount += 1;
+      });
+
+      const requests = await Promise.race([
+        Promise.allSettled([client.get('/first'), client.get('/second')]),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Requests remained pending after refresh failure')), 1000);
+        }),
+      ]);
+
+      expect(requests.length).toBe(2);
+      expect(requests.every((result) => result.status === 'rejected')).toBe(true);
+      expect(sessionExpiredCount).toBe(1);
+      expect(client.getAccessToken()).toBe(null);
+      expect(client.getRefreshToken()).toBe(null);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });

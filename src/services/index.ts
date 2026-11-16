@@ -1,10 +1,7 @@
-/**
- * Consolidated API Services Export
- */
-
 export * from './api/httpClient';
 export * from './api/apiEndpoints';
-export * from './dashboardService';
-export * from './employeeService';
-export * from './departmentService';
-export * from './attendanceService';
+export * from './dashboard.service';
+export * from './employees.service';
+export * from './departments.service';
+export * from './attendance.service';
+export * from './auth.service';

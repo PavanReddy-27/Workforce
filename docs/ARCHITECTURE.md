@@ -63,13 +63,18 @@ src/
 │   ├── Topbar.tsx              # Sticky header with search, theme switch, export, and state simulator
 │   └── WorkforceDonutChart.tsx # Donut chart with contract status and center headcount
 ├── features/
-│   └── employees/
-│       └── EmployeeTable.tsx   # Server-side paginated, searchable, sortable directory table
+│   ├── admin/                  # User accounts, audit logs, and active sessions
+│   ├── auth/                   # Login, protected routes, loading, and access denied
+│   ├── employees/
+│   │   └── EmployeeTable.tsx   # Server-side paginated, searchable, sortable directory table
+│   └── settings/               # Account security and MFA settings
+├── context/                    # Authentication/session state and role permissions
 ├── services/                   # Centralized API service layer
 │   ├── api/
 │   │   ├── apiEndpoints.ts     # Centralized REST route constants
 │   │   └── httpClient.ts       # Type-safe Fetch wrapper with error normalization
 │   ├── attendance.service.ts   # Attendance records fetcher
+│   ├── auth.service.ts         # Login, logout, and refresh-token client operations
 │   ├── dashboard.service.ts    # Dashboard summary, trends, and distribution service
 │   ├── departments.service.ts  # Department service with 60s in-memory caching & deduplication
 │   └── employees.service.ts    # Employee directory query and creation service
@@ -89,6 +94,7 @@ backend/src/
 ├── config/
 │   └── env.ts                  # Validated environment settings (PORT, NODE_ENV, CORS_ORIGIN, DB_PATH)
 ├── controllers/                # HTTP request/response handlers
+│   ├── auth.controller.ts
 │   ├── attendance.controller.ts
 │   ├── dashboard.controller.ts
 │   ├── department.controller.ts
@@ -99,25 +105,32 @@ backend/src/
 │   ├── schema.ts               # Relational DDL definitions and index creation
 │   └── seed.ts                 # Idempotent database seeder (30 employees, 6 depts, 30 days)
 ├── middleware/                 # Cross-cutting middleware
+│   ├── auth.middleware.ts      # JWT session validation and permission guards
 │   ├── errorHandler.ts         # Centralized error handler masking internal paths in production
 │   ├── notFoundHandler.ts      # 404 handler for unmatched routes
+│   ├── rateLimiter.ts          # Login, sensitive-action, and API throttles
 │   └── validateRequest.ts      # Generic Zod validation middleware for query, params, and body
 ├── repositories/               # Repository pattern: pure SQL execution
+│   ├── auth.repository.ts      # SQLite users, roles, sessions, tokens, MFA, and audit data
 │   ├── attendance.repository.ts
 │   ├── dashboard.repository.ts
 │   ├── department.repository.ts
 │   └── employee.repository.ts
 ├── routes/                     # Express router definitions
+│   ├── auth.routes.ts          # Authentication and account management routes
 │   ├── attendance.routes.ts
 │   ├── dashboard.routes.ts
 │   ├── department.routes.ts
 │   ├── employee.routes.ts
 │   └── health.routes.ts
 ├── schemas/                    # Zod input validation schemas
+│   ├── auth.schema.ts
 │   ├── attendance.schema.ts
 │   ├── dashboard.schema.ts
 │   └── employee.schema.ts
 ├── services/                   # Business logic and domain computation
+│   ├── audit.service.ts        # Persistent security audit writes and queries
+│   ├── auth.service.ts         # Login, MFA, lockout, sessions, and token rotation
 │   ├── attendance.service.ts
 │   ├── dashboard.service.ts
 │   ├── department.service.ts

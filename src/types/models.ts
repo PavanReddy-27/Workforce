@@ -1,6 +1,5 @@
 /**
  * Core Domain Models for Workforce Analytics Platform
- * Represents entities that will map directly to SQLite tables in Sprint 2.
  */
 
 export type EmploymentType = 'Full-Time' | 'Contractor' | 'Part-Time' | 'Intern';

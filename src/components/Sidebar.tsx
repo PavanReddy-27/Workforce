@@ -15,6 +15,7 @@ import {
   alpha,
   useMediaQuery,
   Divider,
+  Chip,
 } from '@mui/material';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
@@ -24,9 +25,14 @@ import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
+import PolicyOutlinedIcon from '@mui/icons-material/PolicyOutlined';
+import DevicesOutlinedIcon from '@mui/icons-material/DevicesOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { tokens } from '../theme/theme';
+import { useAuth } from '../context';
+import type { Permission, UserRole } from '../types';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -44,21 +50,17 @@ interface NavItem {
   id: string;
   label: string;
   icon: React.ReactNode;
+  allowedRoles?: UserRole[];
+  requiredPermissions?: Permission[];
 }
 
-const NAV_MAIN: NavItem[] = [
-  { id: 'overview', label: 'Overview', icon: <DashboardOutlinedIcon /> },
-  { id: 'directory', label: 'Employees', icon: <PeopleAltOutlinedIcon /> },
-  { id: 'attendance', label: 'Attendance', icon: <EventAvailableOutlinedIcon /> },
-  { id: 'departments', label: 'Departments', icon: <DomainOutlinedIcon /> },
-  { id: 'recruitment', label: 'Recruitment', icon: <WorkOutlineOutlinedIcon /> },
-  { id: 'performance', label: 'Performance', icon: <AssessmentOutlinedIcon /> },
-];
-
-const NAV_SECONDARY: NavItem[] = [
-  { id: 'payroll', label: 'Payroll', icon: <AccountBalanceWalletOutlinedIcon /> },
-  { id: 'settings', label: 'Settings', icon: <SettingsOutlinedIcon /> },
-];
+const ROLE_BADGE_COLORS: Record<UserRole, 'error' | 'primary' | 'warning' | 'info' | 'default'> = {
+  admin: 'error',
+  hr: 'primary',
+  manager: 'warning',
+  team_lead: 'info',
+  employee: 'default',
+};
 
 export const Sidebar: React.FC<SidebarProps> = ({
   collapsed,
@@ -71,6 +73,97 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user, hasPermission } = useAuth();
+
+  const userRole = user?.role || 'employee';
+
+  const navMain: NavItem[] = [
+    {
+      id: 'overview',
+      label: userRole === 'employee' ? 'My Dashboard' : 'Overview',
+      icon: <DashboardOutlinedIcon />,
+    },
+    {
+      id: 'directory',
+      label: userRole === 'employee' ? 'Company Staff' : userRole === 'team_lead' ? 'Team Staff' : 'Employees',
+      icon: <PeopleAltOutlinedIcon />,
+      requiredPermissions: ['employees:read_all', 'employees:read_dept'],
+    },
+    {
+      id: 'attendance',
+      label: userRole === 'employee' ? 'My Attendance' : 'Attendance',
+      icon: <EventAvailableOutlinedIcon />,
+      requiredPermissions: ['attendance:read_all', 'attendance:read_dept', 'attendance:read_own'],
+    },
+    {
+      id: 'departments',
+      label: 'Departments',
+      icon: <DomainOutlinedIcon />,
+      requiredPermissions: ['departments:read'],
+    },
+    {
+      id: 'recruitment',
+      label: 'Recruitment',
+      icon: <WorkOutlineOutlinedIcon />,
+      allowedRoles: ['admin', 'hr'],
+    },
+    {
+      id: 'performance',
+      label: 'Performance',
+      icon: <AssessmentOutlinedIcon />,
+      allowedRoles: ['admin', 'hr', 'manager'],
+    },
+  ];
+
+  // Admin exclusive security & governance group
+  const navAdmin: NavItem[] = [
+    {
+      id: 'users',
+      label: 'User Accounts',
+      icon: <AdminPanelSettingsOutlinedIcon />,
+      requiredPermissions: ['users:manage'],
+    },
+    {
+      id: 'audit-logs',
+      label: 'Audit Logs',
+      icon: <PolicyOutlinedIcon />,
+      requiredPermissions: ['audit:view'],
+    },
+    {
+      id: 'sessions',
+      label: 'Active Sessions',
+      icon: <DevicesOutlinedIcon />,
+      requiredPermissions: ['users:manage'],
+    },
+  ];
+
+  const navSecondary: NavItem[] = [
+    {
+      id: 'payroll',
+      label: 'Payroll',
+      icon: <AccountBalanceWalletOutlinedIcon />,
+      allowedRoles: ['admin', 'hr'],
+    },
+    {
+      id: 'settings',
+      label: 'Platform Settings',
+      icon: <SettingsOutlinedIcon />,
+      requiredPermissions: ['settings:manage'],
+    },
+  ];
+
+  const filterByRole = (items: NavItem[]) => {
+    return items.filter((item) => {
+      const roleAllowed = !item.allowedRoles || item.allowedRoles.includes(userRole);
+      const permissionAllowed =
+        !item.requiredPermissions || item.requiredPermissions.some((permission) => hasPermission(permission));
+      return roleAllowed && permissionAllowed;
+    });
+  };
+
+  const visibleMain = filterByRole(navMain);
+  const visibleAdmin = filterByRole(navAdmin);
+  const visibleSecondary = filterByRole(navSecondary);
 
   const renderNavGroup = (items: NavItem[]) =>
     items.map((item) => {
@@ -106,7 +199,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 },
               }}
             >
-              {/* Thin left active indicator */}
               {isActive && (
                 <Box
                   sx={{
@@ -151,6 +243,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </ListItem>
       );
     });
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'U';
+    const parts = name.split(/[\s_.-]+/);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const displayName = user?.employee_details
+    ? `${user.employee_details.first_name} ${user.employee_details.last_name}`
+    : user?.username || 'User';
 
   const sidebarContent = (
     <Box
@@ -252,19 +355,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </Box>
         )}
 
-        {/* Navigation */}
+        {/* Core Navigation */}
         <List sx={{ px: collapsed && !isMobile ? 0.75 : 1.25, pt: 1, pb: 0.5 }}>
-          {renderNavGroup(NAV_MAIN)}
+          {renderNavGroup(visibleMain)}
         </List>
+
+        {/* Administration Section (if Admin) */}
+        {visibleAdmin.length > 0 && (
+          <>
+            <Divider sx={{ mx: collapsed && !isMobile ? 1 : 2, my: 0.5 }} />
+            {(!collapsed || isMobile) && (
+              <Typography
+                variant="overline"
+                sx={{
+                  px: 2,
+                  py: 0.5,
+                  display: 'block',
+                  color: 'text.secondary',
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                }}
+              >
+                SECURITY & RBAC
+              </Typography>
+            )}
+            <List sx={{ px: collapsed && !isMobile ? 0.75 : 1.25, pb: 0.5 }}>
+              {renderNavGroup(visibleAdmin)}
+            </List>
+          </>
+        )}
 
         <Divider sx={{ mx: collapsed && !isMobile ? 1 : 2, my: 0.5 }} />
 
         <List sx={{ px: collapsed && !isMobile ? 0.75 : 1.25, pt: 0.5 }}>
-          {renderNavGroup(NAV_SECONDARY)}
+          {renderNavGroup(visibleSecondary)}
         </List>
       </Box>
 
-      {/* User profile footer */}
+      {/* User profile footer with Role Pill */}
       <Box sx={{ p: collapsed && !isMobile ? 1 : 1.5 }}>
         <Box
           sx={{
@@ -283,24 +412,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
               sx={{
                 width: 32,
                 height: 32,
-                fontSize: '0.8125rem',
+                fontSize: '0.75rem',
                 fontWeight: 700,
-                background: isDark
-                  ? 'linear-gradient(135deg, #3B82F6, #6366F1)'
-                  : 'linear-gradient(135deg, #DBEAFE, #EDE9FE)',
-                color: isDark ? '#FFFFFF' : '#3B82F6',
+                backgroundColor: `${ROLE_BADGE_COLORS[userRole] || 'primary'}.main`,
+                color: '#FFFFFF',
               }}
             >
-              PR
+              {getInitials(displayName)}
             </Avatar>
             {(!collapsed || isMobile) && (
               <Box sx={{ overflow: 'hidden' }}>
                 <Typography noWrap sx={{ fontSize: '0.8125rem', fontWeight: 600, lineHeight: 1.3, color: 'text.primary' }}>
-                  Pavan Reddy
+                  {displayName}
                 </Typography>
-                <Typography sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary, lineHeight: 1.3 }}>
-                  WFA Developer
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
+                  <Chip
+                    label={userRole.toUpperCase()}
+                    size="small"
+                    color={ROLE_BADGE_COLORS[userRole] || 'default'}
+                    sx={{ height: 18, fontSize: '0.625rem', fontWeight: 700, px: 0.5 }}
+                  />
+                </Box>
               </Box>
             )}
           </Box>

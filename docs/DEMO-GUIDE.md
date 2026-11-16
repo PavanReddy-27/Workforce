@@ -6,11 +6,18 @@ This document provides a structured, 5–10 minute demonstration sequence for ev
 
 ## 1. Quick Launch Setup
 
-Open two terminal windows in the project root (`c:\work\Workforce dashboard\Workforce`):
+Open two terminal windows in the project root (`c:\work\Workforce dashboard\Workforce`).
+For a fresh local database, seed the development data once:
+
+```powershell
+npm run server:seed
+```
+
+Do not use the development seed accounts or data in production.
 
 ### Terminal 1: Start SQLite REST API Backend
 ```powershell
-# Installs backend dependencies if needed and boots server on port 3000
+# Boots the backend on port 3000 (install dependencies first if needed)
 npm run server
 ```
 *Expected log output*:
@@ -52,7 +59,7 @@ Examine the top row of metrics:
 - **Absent Today**: Staff marked absent (`1`).
 - **Attendance Rate**: Evaluated presence percentage (`96.4%`).
 - **On Leave**: Staff on approved leave (`0`).
-*Talking Point*: Point out that these values are dynamically queried via `GET /api/dashboard/summary` from SQLite, and unrecorded employees are not falsely counted as absent.
+*Talking Point*: Values depend on the seeded data and selected date and are dynamically queried from SQLite. Unrecorded employees are not falsely counted as absent.
 
 ### Step 3: Interactive Visualizations (2 Minutes)
 1. **Attendance Trend Chart**:
@@ -94,6 +101,13 @@ Scroll down to the **Employee Directory** table:
 3. Click **Initiate Onboarding**.
 4. Observe the confirmation snackbar, the employee table updating with Alexander Wright, and the KPI card total headcount incrementing!
 
+### Step 7: Authentication, roles, and security (2 Minutes)
+1. As Admin, open **User Accounts**, **Audit Logs**, and **Active Sessions** to demonstrate administrative controls and recorded authentication events.
+2. Log out and sign in as the Employee demo account. Confirm that the dashboard is scoped to the employee and admin-only navigation is absent.
+3. While signed in as Employee, open `http://localhost:5173/users` directly. The protected route must display the access-denied state; API permissions are enforced independently on the backend.
+4. To demonstrate MFA, use a test account to set up an authenticator from **Platform Settings**. Scan the QR code, confirm with a current code, and save the one-time backup codes. Never use a real employee's MFA secret for a presentation.
+5. To demonstrate lockout safely, use a disposable seeded/test account and enter a wrong password five times. Confirm subsequent login is rejected until the lockout expires or test data is reset.
+
 ---
 
 ## 3. Sample REST API Verification Commands
@@ -105,46 +119,43 @@ You can verify the backend independently using any terminal:
 curl.exe -s http://localhost:3000/api/health
 ```
 
-### 2. Fetch Summary KPIs
+### 2. Log in and store the access token
 ```powershell
-curl.exe -s "http://localhost:3000/api/dashboard/summary"
+$login = Invoke-RestMethod -Uri "http://localhost:3000/api/auth/login" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body (@{ email = "admin@workforce.com"; password = "Admin@123456" } | ConvertTo-Json)
+$token = $login.data.accessToken
 ```
 
-### 3. Fetch Summary KPIs Filtered by Department
+### 3. Fetch Summary KPIs with authentication
 ```powershell
-curl.exe -s "http://localhost:3000/api/dashboard/summary?department=Engineering"
+curl.exe -s "http://localhost:3000/api/dashboard/summary?department=Engineering" `
+  -H "Authorization: Bearer $token"
 ```
 
-### 4. Search Employees with Pagination
+### 4. Search Employees with pagination
 ```powershell
-curl.exe -s "http://localhost:3000/api/employees?search=Sarah&page=1&limit=5"
+curl.exe -s "http://localhost:3000/api/employees?search=Sarah&page=1&limit=5" `
+  -H "Authorization: Bearer $token"
 ```
 
-### 5. Fetch All 6 Departments
+### 5. Fetch departments with authentication
 ```powershell
-curl.exe -s http://localhost:3000/api/departments
+curl.exe -s http://localhost:3000/api/departments -H "Authorization: Bearer $token"
 ```
 
 ---
 
-## 4. Manual Screenshot Evidence Capture Guide
+## 5. Screenshot Evidence
 
-Because headless browser automation drivers (Playwright) require internet downloads that are blocked by offline sandboxes, follow these steps to capture genuine demonstration screenshots:
+The accompanying browser captures show the live Admin dashboard, user
+management, audit log, and Employee access-denied state:
 
-1. **Desktop Dashboard Overview**:
-   - Browser URL: `http://localhost:5173`
-   - Viewport: 1920x1080 (or full screen)
-   - Save to: `docs/screenshots/01-dashboard-desktop.png`
-2. **Filtered View (Engineering isolated)**:
-   - Click **Department** filter -> Select **Engineering**.
-   - Save to: `docs/screenshots/02-filtered-dashboard.png`
-3. **Employee Directory Search & Pagination**:
-   - Scroll to Employee Table.
-   - Type `"Sarah"` into search input.
-   - Save to: `docs/screenshots/03-employee-table-search.png`
-4. **Dark Mode Presentation**:
-   - Click the Moon icon in the topbar to toggle Dark Mode.
-   - Save to: `docs/screenshots/04-dark-theme.png`
-5. **New Hire Requisition Dialog**:
-   - Click **Add Employee** button.
-   - Save to: `docs/screenshots/05-add-employee-modal.png`
+![Admin workforce dashboard](screenshots/01-dashboard.png)
+
+![Admin user management](screenshots/02-user-management.png)
+
+![Security audit logs](screenshots/03-audit-logs.png)
+
+![Employee access denied](screenshots/04-access-denied.png)

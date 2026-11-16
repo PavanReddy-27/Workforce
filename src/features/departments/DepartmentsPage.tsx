@@ -27,8 +27,8 @@ import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import SearchIcon from '@mui/icons-material/Search';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { dashboardService } from '../../services/dashboard.service';
-import { EmployeeTable } from '../employees/EmployeeTable';
+import { dashboardService } from '../../services';
+import { EmployeeTable } from '../employees';
 
 const DEPT_COLORS: Record<string, string> = {
   'Engineering': '#6366F1',

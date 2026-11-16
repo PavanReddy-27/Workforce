@@ -45,12 +45,11 @@ import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
-import { attendanceService } from '../../services/attendance.service';
-import { employeeService } from '../../services/employees.service';
-import { departmentService } from '../../services/departments.service';
+import { attendanceService, employeeService, departmentService } from '../../services';
 import type { AttendanceWithEmployee, BackendEmployee, FilterState, KpiMetric } from '../../types';
-import { EmployeeDetailDialog } from '../employees/EmployeeDetailDialog';
+import { EmployeeDetailDialog } from '../employees';
 import { exportToCsv, formatAttendanceDate, formatAttendanceTime } from '../../utils';
+import { useAuth } from '../../context';
 
 const STATUS_OPTIONS = ['All Statuses', 'Present', 'Absent', 'On Leave'];
 
@@ -81,6 +80,8 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const { hasPermission } = useAuth();
+  const canExport = hasPermission('export:data');
 
   const defaults = getDefaultDateRange();
 
@@ -398,17 +399,19 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
               </Select>
             </FormControl>
             <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
-              <Tooltip title="Export Attendance CSV">
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<FileDownloadOutlinedIcon sx={{ fontSize: 16 }} />}
-                  onClick={handleExportCsv}
-                  sx={{ fontSize: '0.75rem', height: 36, textTransform: 'none' }}
-                >
-                  Export CSV
-                </Button>
-              </Tooltip>
+              {canExport && (
+                <Tooltip title="Export Attendance CSV">
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<FileDownloadOutlinedIcon sx={{ fontSize: 16 }} />}
+                    onClick={handleExportCsv}
+                    sx={{ fontSize: '0.75rem', height: 36, textTransform: 'none' }}
+                  >
+                    Export CSV
+                  </Button>
+                </Tooltip>
+              )}
               {isFiltered && (
                 <Button size="small" variant="outlined" startIcon={<FilterListOffIcon />} onClick={handleReset} sx={{ fontSize: '0.75rem', height: 36, textTransform: 'none' }}>
                   Clear

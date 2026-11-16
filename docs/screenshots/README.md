@@ -1,18 +1,17 @@
 # Workforce Analytics Platform — Screenshot Evidence & Capture Directory
 
-This directory stores genuine application screenshots demonstrating the running Workforce Analytics Platform.
+This directory contains screenshots captured from the running Workforce Analytics Platform.
 
 ---
 
 ## Screenshot Inventory & Capture Specifications
 
-| Screenshot File | Description | Target Viewport | Key Visual Elements |
-|---|---|---|---|
-| `01-dashboard-desktop.png` | Main Dashboard Overview | 1920x1080 Desktop | 5 KPI cards with live metrics, Attendance Trend Chart, Workforce Donut Chart, and Topbar. |
-| `02-dashboard-filtered.png` | Filtered Analytics View | 1920x1080 Desktop | Department filter set to "Engineering", isolated KPI metrics, highlighted chart bars. |
-| `03-employee-table.png` | Employee Directory Table | 1920x1080 Desktop | Search box filtering for "Sarah", department chip badges, pagination controls. |
-| `04-dark-mode.png` | Slate-Blue Dark Theme | 1920x1080 Desktop | Night mode palette (`#0F172A` background, `#1E293B` cards), dynamic chart contrast. |
-| `05-add-employee.png` | Onboarding Dialog Modal | 1920x1080 Desktop | "Initiate New Hire Requisition" dialog filled with form inputs. |
+| Screenshot File | Description | Key Visual Elements |
+|---|---|---|
+| `01-dashboard.png` | Admin dashboard | Live workforce KPIs and attendance charts |
+| `02-user-management.png` | Admin user management | User list, roles, MFA status, and account status |
+| `03-audit-logs.png` | Security audit logs | Recorded authentication events |
+| `04-access-denied.png` | Employee access denial | Restricted audit-log route and missing `audit:view` permission |
 
 ---
 
@@ -22,5 +21,5 @@ This directory stores genuine application screenshots demonstrating the running 
    - Terminal 1: `npm run server`
    - Terminal 2: `npm run dev`
 2. Open Chrome/Edge at `http://localhost:5173`.
-3. Press `F12` -> Open Developer Tools -> Press `Ctrl+Shift+P` -> Type `"Capture full size screenshot"`.
-4. Save the captured PNG files to this directory (`docs/screenshots/`).
+3. Use the browser's screenshot command or operating-system capture tool.
+4. Save additional PNG captures to this directory (`docs/screenshots/`).

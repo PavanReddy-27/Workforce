@@ -27,6 +27,18 @@ describe('Health API Integration Tests', () => {
     expect(res.body.data.database.status).toBe('connected');
     expect(res.body.data.database.dialect).toBe('sqlite');
     expect(typeof res.body.data.uptime).toBe('number');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['ratelimit-limit']).toBeDefined();
+  });
+
+  it('rejects request bodies exceeding the configured limit', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set('Content-Type', 'application/json')
+      .send(`{"email":"admin@workforce.com","password":"${'x'.repeat(33 * 1024)}"}`);
+
+    expect(res.status).toBe(413);
+    expect(res.body.error.code).toBe('PAYLOAD_TOO_LARGE');
   });
 
   it('GET /api/unknown-endpoint returns 404 with standard error format', async () => {

@@ -17,8 +17,7 @@ import {
 } from '@mui/material';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import type { FilterState } from '../types';
-import { departmentService } from '../services/departments.service';
-import { employeeService } from '../services/employees.service';
+import { departmentService, employeeService } from '../services';
 
 const TIME_RANGES: { value: '7d' | '30d' | '90d' | '1y'; label: string }[] = [
   { value: '7d', label: '7D' },

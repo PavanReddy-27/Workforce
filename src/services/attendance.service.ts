@@ -1,6 +1,5 @@
 /**
- * Centralized Attendance API Service
- * Interacts with Sprint 2 REST APIs:
+ * Attendance API Service
  * - GET /api/attendance (with employeeId, date, date range, status, and pagination)
  * - POST /api/attendance
  */

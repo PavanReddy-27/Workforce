@@ -22,8 +22,8 @@ import {
   transformSummaryToKpis,
   transformAttendanceTrends,
   transformDistribution,
-} from '../services/dashboard.service';
-import { employeeService } from '../services/employees.service';
+  employeeService,
+} from '../services';
 
 export interface UseDashboardDataResult {
   totalHeadcount: number;

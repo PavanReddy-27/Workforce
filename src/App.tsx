@@ -19,10 +19,10 @@ import {
   MenuItem,
   Chip,
 } from '@mui/material';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import { createAppTheme } from './theme/theme';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
@@ -37,13 +37,22 @@ import { EmptyState } from './components/EmptyState';
 import { ErrorState } from './components/ErrorState';
 import { PlaceholderPage } from './components/PlaceholderPage';
 import { EmployeeTable } from './features/employees';
-import { AttendancePage } from './features/attendance/AttendancePage';
-import { DepartmentsPage } from './features/departments/DepartmentsPage';
-import { employeeService } from './services/employees.service';
-import { departmentService } from './services/departments.service';
-import type { FilterState } from './types';
+import { AttendancePage } from './features/attendance';
+import { DepartmentsPage } from './features/departments';
+import {
+  LoginPage,
+  AccessDeniedPage,
+  AuthLoadingScreen,
+  LoginRoute,
+  RequireAuthentication,
+} from './features/auth';
+import { UserManagementPage, AuditLogsPage, ActiveSessionsPage } from './features/admin';
+import { SettingsPage } from './features/settings';
+import { employeeService, departmentService } from './services';
+import type { FilterState, Permission, UserRole } from './types';
 import { useDashboardData } from './hooks';
 import { exportToCsv } from './utils';
+import { AuthProvider, useAuth } from './context';
 
 /** Persist and retrieve the user's color mode preference */
 function getInitialMode(): 'light' | 'dark' {
@@ -56,15 +65,84 @@ function getInitialMode(): 'light' | 'dark' {
   return 'light';
 }
 
-export const App: React.FC = () => {
-  // Theme state persisted in localStorage
-  const [mode, setMode] = useState<'light' | 'dark'>(getInitialMode);
-  const theme = useMemo(() => createAppTheme(mode), [mode]);
+const TAB_PATHS: Record<string, string> = {
+  directory: 'employees',
+  'audit-logs': 'audit-logs',
+};
+
+interface WorkspaceRoute {
+  tab: string;
+  permissions?: Permission[];
+  roles?: UserRole[];
+}
+
+const WORKSPACE_ROUTES: Record<string, WorkspaceRoute> = {
+  '/': { tab: 'overview', permissions: ['dashboard:view'] },
+  '/employees': {
+    tab: 'directory',
+    permissions: ['employees:read_all', 'employees:read_dept'],
+  },
+  '/attendance': {
+    tab: 'attendance',
+    permissions: ['attendance:read_all', 'attendance:read_dept', 'attendance:read_own'],
+  },
+  '/departments': { tab: 'departments', permissions: ['departments:read'] },
+  '/users': { tab: 'users', permissions: ['users:manage'] },
+  '/audit-logs': { tab: 'audit-logs', permissions: ['audit:view'] },
+  '/sessions': { tab: 'sessions', permissions: ['users:manage'] },
+  '/recruitment': { tab: 'recruitment', roles: ['admin', 'hr'] },
+  '/performance': { tab: 'performance', roles: ['admin', 'hr', 'manager'] },
+  '/payroll': { tab: 'payroll', roles: ['admin', 'hr'] },
+  '/settings': { tab: 'settings', permissions: ['settings:manage'] },
+};
+
+const hasAnyPermission = (
+  userPermissions: Permission[],
+  requiredPermissions: Permission[]
+): boolean => requiredPermissions.some((permission) => userPermissions.includes(permission));
+
+const ProtectedWorkspaceRoute: React.FC<{
+  mode: 'light' | 'dark';
+  onToggleMode: () => void;
+}> = ({ mode, onToggleMode }) => {
+  const { permissions, hasRole } = useAuth();
+  const { pathname } = useLocation();
+  const routePath = pathname.replace(/\/+$/, '') || '/';
+  const navigate = useNavigate();
+  const route = WORKSPACE_ROUTES[routePath];
+
+  if (!route) return <Navigate to="/" replace />;
+
+  const authorized = route.permissions
+    ? hasAnyPermission(permissions, route.permissions)
+    : route.roles
+      ? hasRole(...route.roles)
+      : false;
+
+  if (!authorized) {
+    return (
+      <AccessDeniedPage
+        requiredPermission={route.permissions?.[0]}
+        requiredRole={route.roles?.join(' or ')}
+        onGoHome={() => navigate('/')}
+      />
+    );
+  }
+
+  return <AuthenticatedAppContent activeTab={route.tab} mode={mode} onToggleMode={onToggleMode} />;
+};
+
+const AuthenticatedAppContent: React.FC<{
+  activeTab: string;
+  mode: 'light' | 'dark';
+  onToggleMode: () => void;
+}> = ({ activeTab, mode, onToggleMode }) => {
+  const { role, hasPermission, user } = useAuth();
+  const navigate = useNavigate();
 
   // Navigation states
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<string>('overview');
 
   // Filter state
   const [filters, setFilters] = useState<FilterState>({
@@ -87,15 +165,6 @@ export const App: React.FC = () => {
     location: '',
   });
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
-
-  // Persist color mode
-  useEffect(() => {
-    try {
-      localStorage.setItem('wfa-color-mode', mode);
-    } catch {
-      /* no-op */
-    }
-  }, [mode]);
 
   useEffect(() => {
     let active = true;
@@ -128,7 +197,7 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Synchronized computation of all data series based on the 4 active filters
+  // Synchronized computation of all data series based on active filters
   const {
     totalHeadcount,
     kpis,
@@ -143,14 +212,10 @@ export const App: React.FC = () => {
     refetch,
   } = useDashboardData(filters);
 
-  const handleToggleMode = () => {
-    setMode((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
-
   const handleExport = async () => {
     try {
       setSnackbarSeverity('info');
-      setSnackbarMessage('Generating workforce analytics CSV report...');
+      setSnackbarMessage('Exporting employee records to CSV...');
       const res = await employeeService.getEmployees({ limit: 1000 });
       const records = res?.data || [];
       if (!records || records.length === 0) {
@@ -203,11 +268,11 @@ export const App: React.FC = () => {
     });
   };
 
-  const handleNewHireSubmit = async (e: React.FormEvent) => {
+  const handleNewHireSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     const fullName = newHireForm.name.trim();
-    const role = newHireForm.role.trim();
-    if (!fullName || !role) {
+    const employeeRole = newHireForm.role.trim();
+    if (!fullName || !employeeRole) {
       return;
     }
 
@@ -221,7 +286,7 @@ export const App: React.FC = () => {
       const res = await employeeService.createEmployee({
         first_name: firstName,
         last_name: lastName,
-        job_title: role,
+        job_title: employeeRole,
         department: newHireForm.department,
         location: newHireForm.location,
         employment_status: 'Active',
@@ -229,12 +294,12 @@ export const App: React.FC = () => {
 
       if (res.success) {
         setSnackbarSeverity('success');
-        setSnackbarMessage(`Successfully onboarded ${fullName} into ${newHireForm.department}.`);
+        setSnackbarMessage(`Successfully added ${fullName} to ${newHireForm.department}.`);
         refetch();
         setTableRefreshKey((prev) => prev + 1);
       } else {
         setSnackbarSeverity('error');
-        setSnackbarMessage(`Failed to create employee dossier: ${res.message || 'Unknown error'}`);
+        setSnackbarMessage(`Failed to create employee: ${res.message || 'Unknown error'}`);
       }
     } catch (err) {
       setSnackbarSeverity('error');
@@ -252,9 +317,26 @@ export const App: React.FC = () => {
   const renderMainContent = () => {
     switch (activeTab) {
       case 'directory':
+        // RBAC: Directory accessible to Admin, HR, Manager, Team Lead
+        if (!hasPermission('employees:read_all') && !hasPermission('employees:read_dept')) {
+          return (
+            <AccessDeniedPage
+              requiredPermission="employees:read_all"
+              onGoHome={() => navigate('/')}
+            />
+          );
+        }
         return <EmployeeTable refreshTrigger={tableRefreshKey} />;
 
       case 'attendance':
+        if (!hasPermission('attendance:read_all') && !hasPermission('attendance:read_dept') && !hasPermission('attendance:read_own')) {
+          return (
+            <AccessDeniedPage
+              requiredPermission="attendance:read_own"
+              onGoHome={() => navigate('/')}
+            />
+          );
+        }
         return (
           <AttendancePage
             dashboardFilters={filters}
@@ -268,13 +350,54 @@ export const App: React.FC = () => {
         );
 
       case 'departments':
+        if (!hasPermission('departments:read')) {
+          return (
+            <AccessDeniedPage
+              requiredPermission="departments:read"
+              onGoHome={() => navigate('/')}
+            />
+          );
+        }
         return <DepartmentsPage />;
+
+      case 'users':
+        if (!hasPermission('users:manage')) {
+          return (
+            <AccessDeniedPage
+              requiredPermission="users:manage"
+              onGoHome={() => navigate('/')}
+            />
+          );
+        }
+        return <UserManagementPage />;
+
+      case 'audit-logs':
+        if (!hasPermission('audit:view')) {
+          return (
+            <AccessDeniedPage
+              requiredPermission="audit:view"
+              onGoHome={() => navigate('/')}
+            />
+          );
+        }
+        return <AuditLogsPage />;
+
+      case 'sessions':
+        if (!hasPermission('users:manage')) {
+          return (
+            <AccessDeniedPage
+              requiredPermission="users:manage"
+              onGoHome={() => navigate('/')}
+            />
+          );
+        }
+        return <ActiveSessionsPage />;
 
       case 'recruitment':
         return (
           <PlaceholderPage
             title="Recruitment Pipeline"
-            description="Recruitment management is outside the scope of the current Workforce Analytics release."
+            description="Recruitment management module for HR and Talent Acquisition teams."
             icon={<WorkOutlineOutlinedIcon />}
             color="#F59E0B"
           />
@@ -284,7 +407,7 @@ export const App: React.FC = () => {
         return (
           <PlaceholderPage
             title="Performance Analytics"
-            description="Performance reviews and goal tracking are outside the scope of the current Workforce Analytics release."
+            description="Performance reviews, goal tracking, and appraisal cycles."
             icon={<AssessmentOutlinedIcon />}
             color="#10B981"
           />
@@ -294,108 +417,95 @@ export const App: React.FC = () => {
         return (
           <PlaceholderPage
             title="Payroll & Compensation"
-            description="Payroll and compensation management are outside the scope of the current Workforce Analytics release."
+            description="Payroll and compensation management for Finance and People Operations."
             icon={<AccountBalanceWalletOutlinedIcon />}
             color="#8B5CF6"
           />
         );
 
       case 'settings':
-        return (
-          <PlaceholderPage
-            title="Platform Settings"
-            description="Account, integration, and platform settings are outside the scope of the current Workforce Analytics release."
-            icon={<SettingsOutlinedIcon />}
-            color="#64748B"
-          />
-        );
+        return <SettingsPage />;
 
-      default:
-        return (
-          <>
-            {/* Filters Component (all 4 required filters + reset action) */}
-            <DashboardFilters
-              filters={filters}
-              onFilterChange={setFilters}
-              filteredHeadcount={matchingHeadcount}
-            />
+      default: {
+        let dashboardContent: React.ReactNode;
 
-            {/* Conditional States Rendering */}
-            {loading && kpis.length === 0 ? (
-              <LoadingSkeleton />
-            ) : error ? (
-              <ErrorState onRetry={refetch} />
-            ) : totalHeadcount === 0 && !loading ? (
-              <EmptyState onResetFilters={handleResetAllFilters} />
-            ) : (
-              <>
-                {/* Exactly 5 Primary KPI Cards in a balanced desktop grid */}
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: {
-                      xs: '1fr',
-                      sm: 'repeat(2, 1fr)',
-                      md: 'repeat(3, 1fr)',
-                      lg: 'repeat(5, 1fr)',
-                    },
-                    gap: 2,
-                    mb: 2.5,
-                  }}
-                >
-                  {kpis.map((metric) => (
-                    <KpiCard key={metric.id} metric={metric} loading={loading} />
-                  ))}
-                </Box>
+        if (loading && kpis.length === 0) {
+          dashboardContent = <LoadingSkeleton />;
+        } else if (error) {
+          dashboardContent = <ErrorState onRetry={refetch} />;
+        } else if (totalHeadcount === 0 && !loading) {
+          dashboardContent = <EmptyState onResetFilters={handleResetAllFilters} />;
+        } else {
+          dashboardContent = (
+            <>
+              {/* 5 Primary KPI Cards */}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(2, 1fr)',
+                    md: 'repeat(3, 1fr)',
+                    lg: 'repeat(5, 1fr)',
+                  },
+                  gap: 2,
+                  mb: 2.5,
+                }}
+              >
+                {kpis.map((metric) => (
+                  <KpiCard key={metric.id} metric={metric} loading={loading} />
+                ))}
+              </Box>
 
-                {/* Row 1: Attendance Trend Chart + Workforce Status Donut */}
-                {partialErrors.attendance && (
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    {partialErrors.attendance}
-                  </Alert>
-                )}
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' },
-                    gap: 2.5,
-                    mb: 2.5,
-                    alignItems: 'stretch',
-                  }}
-                >
-                  <AttendanceTrendChart data={trendPoints} timeRange={filters.timeRange} />
-                  <WorkforceDonutChart segments={workforceDonutSegments} />
-                </Box>
+              {/* Row 1: Attendance Trend Chart + Workforce Status Donut */}
+              {partialErrors.attendance && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {partialErrors.attendance}
+                </Alert>
+              )}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' },
+                  gap: 2.5,
+                  mb: 2.5,
+                  alignItems: 'stretch',
+                }}
+              >
+                <AttendanceTrendChart data={trendPoints} timeRange={filters.timeRange} />
+                <WorkforceDonutChart segments={workforceDonutSegments} />
+              </Box>
 
-                {/* Row 2: Department Distribution Chart + Recent Employee Activity */}
-                {partialErrors.distribution && (
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    {partialErrors.distribution}
-                  </Alert>
-                )}
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' },
-                    gap: 2.5,
-                    mb: 2.5,
-                    alignItems: 'stretch',
-                  }}
-                >
-                  <DepartmentDistributionChart
-                    data={departmentChartData}
-                    selectedDepartment={filters.department}
-                    onSelectDepartment={(dept) =>
-                      setFilters((prev) => ({ ...prev, department: dept }))
-                    }
-                  />
-                  <RecentActivity
-                    activities={filteredActivities}
-                    onViewAll={() => setActiveTab('directory')}
-                  />
-                </Box>
+              {/* Row 2: Department Distribution Chart + Recent Employee Activity */}
+              {partialErrors.distribution && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  {partialErrors.distribution}
+                </Alert>
+              )}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', lg: '7fr 5fr' },
+                  gap: 2.5,
+                  mb: 2.5,
+                  alignItems: 'stretch',
+                }}
+              >
+                <DepartmentDistributionChart
+                  data={departmentChartData}
+                  selectedDepartment={filters.department}
+                  onSelectDepartment={(dept) =>
+                    setFilters((prev) => ({ ...prev, department: dept }))
+                  }
+                />
+                <RecentActivity
+                  activities={filteredActivities}
+                  onViewAll={() => navigate('/employees')}
+                />
+              </Box>
 
-                {/* Row 3: Live Employee Directory synchronized with database & filters */}
+              {/* Row 3: Live Employee Directory (if permitted) */}
+              {(hasPermission('employees:read_all') || hasPermission('employees:read_dept')) && (
                 <Box sx={{ mt: 3 }}>
                   <EmployeeTable
                     title="Workforce Employee Directory"
@@ -407,128 +517,165 @@ export const App: React.FC = () => {
                     refreshTrigger={tableRefreshKey}
                   />
                 </Box>
-              </>
-            )}
+              )}
+            </>
+          );
+        }
+
+        return (
+          <>
+            <DashboardFilters
+              filters={filters}
+              onFilterChange={setFilters}
+              filteredHeadcount={matchingHeadcount}
+            />
+            {dashboardContent}
           </>
         );
+      }
     }
   };
 
   const getPageTitle = () => {
     switch (activeTab) {
-      case 'directory': return { title: 'Employee Directory', subtitle: 'Manage and view all employees with server-side search, sorting and pagination.' };
-      case 'attendance': return null; // AttendancePage renders its own title
-      case 'departments': return null; // DepartmentsPage renders its own title
-      case 'recruitment': return null;
-      case 'performance': return null;
-      case 'payroll': return null;
-      case 'settings': return null;
-      default: return {
-        title: 'Human Capital Performance & Dynamics',
-        subtitle: 'Monitor global staff presence, structural headcount, and organizational velocity in real time.',
-      };
+      case 'directory':
+        return {
+          title: 'Employee Directory',
+          subtitle: 'Manage and view personnel records with search, sorting, and pagination.',
+        };
+      case 'users':
+        return {
+          title: 'Security & Access Governance',
+          subtitle: 'Administer system accounts, assign RBAC roles, and manage permissions.',
+        };
+      case 'audit-logs':
+        return {
+          title: 'Security Audit & Traceability',
+          subtitle: 'Immutable logs of authentication events, authorization checks, and sensitive mutations.',
+        };
+      case 'sessions':
+        return {
+          title: 'Active Session Governance',
+          subtitle: 'Monitor active user sessions and terminate tokens in real time.',
+        };
+      case 'settings':
+        return {
+          title: 'Account & Security Settings',
+          subtitle: 'Manage your password and multi-factor authentication.',
+        };
+      case 'attendance':
+      case 'departments':
+      case 'recruitment':
+      case 'performance':
+      case 'payroll':
+        return null;
+      default:
+        return {
+          title: role === 'employee' ? 'My Workforce Portal' : 'Workforce Overview',
+          subtitle:
+            role === 'employee'
+              ? `Welcome back, ${user?.username}! Here is your attendance and schedule summary.`
+              : role === 'manager'
+                ? 'Review workforce and attendance trends for your department.'
+                : role === 'team_lead'
+                  ? 'Review your department roster and team attendance trends.'
+                  : role === 'hr'
+                    ? 'Review company-wide workforce and attendance analytics.'
+                    : 'Monitor workforce analytics and manage platform access.',
+        };
     }
   };
 
   const pageInfo = getPageTitle();
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
-        {/* Navigation Sidebar */}
-        <Sidebar
-          collapsed={collapsed}
-          onToggleCollapse={() => setCollapsed(!collapsed)}
-          activeTab={activeTab}
-          onSelectTab={(tab) => {
-            setActiveTab(tab);
-          }}
-          mobileOpen={mobileOpen}
-          onMobileClose={() => setMobileOpen(false)}
+    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: 'background.default' }}>
+      {/* Sidebar Navigation */}
+      <Sidebar
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed(!collapsed)}
+        activeTab={activeTab}
+        onSelectTab={(tab) => navigate(tab === 'overview' ? '/' : `/${TAB_PATHS[tab] ?? tab}`)}
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
+      />
+
+      {/* Main Content */}
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          overflowX: 'hidden',
+        }}
+      >
+        <Topbar
+          mode={mode}
+          onToggleMode={onToggleMode}
+          onOpenMobileSidebar={() => setMobileOpen(true)}
+          searchQuery={filters.searchQuery}
+          onSearchChange={(q) => setFilters((prev) => ({ ...prev, searchQuery: q }))}
+          onExportClick={handleExport}
+          onAddEmployeeClick={() => setNewHireDialogOpen(true)}
         />
 
-        {/* Main Application Area */}
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            minWidth: 0,
-            overflowX: 'hidden',
-          }}
-        >
-          {/* Topbar Header */}
-          <Topbar
-            mode={mode}
-            onToggleMode={handleToggleMode}
-            onOpenMobileSidebar={() => setMobileOpen(true)}
-            searchQuery={filters.searchQuery}
-            onSearchChange={(q) => setFilters((prev) => ({ ...prev, searchQuery: q }))}
-            onExportClick={handleExport}
-            onAddEmployeeClick={() => setNewHireDialogOpen(true)}
-          />
-
-          {/* Dashboard Body */}
-          <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, flexGrow: 1 }}>
-            <Container maxWidth="xl" disableGutters>
-              {/* Header Title Section — only show for overview and directory */}
-              {pageInfo && (
-                <Box
-                  sx={{
-                    display: 'flex',
-                    flexDirection: { xs: 'column', sm: 'row' },
-                    justifyContent: 'space-between',
-                    alignItems: { xs: 'flex-start', sm: 'center' },
-                    mb: 2.5,
-                    gap: 1.5,
-                  }}
-                >
-                  <Box>
-                    <Typography
-                      variant="h5"
-                      sx={{
-                        fontWeight: 700,
-                        fontSize: { xs: '1.25rem', sm: '1.5rem' },
-                        letterSpacing: '-0.02em',
-                        color: 'text.primary',
-                      }}
-                    >
-                      {pageInfo.title}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-                      {pageInfo.subtitle}
-                    </Typography>
-                  </Box>
-
-                  {activeTab === 'overview' && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Chip
-                        label="Target: 95% Presence"
-                        size="small"
-                        variant="outlined"
-                        sx={{ fontWeight: 600, fontSize: '0.75rem', height: 26 }}
-                      />
-                      <Chip
-                        label="Live Telemetry"
-                        size="small"
-                        color="success"
-                        sx={{ fontWeight: 600, fontSize: '0.75rem', height: 26 }}
-                      />
-                    </Box>
-                  )}
+        <Box sx={{ p: { xs: 2, sm: 2.5, md: 3 }, flexGrow: 1 }}>
+          <Container maxWidth="xl" disableGutters>
+            {pageInfo && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: { xs: 'column', sm: 'row' },
+                  justifyContent: 'space-between',
+                  alignItems: { xs: 'flex-start', sm: 'center' },
+                  mb: 2.5,
+                  gap: 1.5,
+                }}
+              >
+                <Box>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: 700,
+                      fontSize: { xs: '1.25rem', sm: '1.5rem' },
+                      letterSpacing: '-0.02em',
+                      color: 'text.primary',
+                    }}
+                  >
+                    {pageInfo.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
+                    {pageInfo.subtitle}
+                  </Typography>
                 </Box>
-              )}
 
-              {/* Main Content Area */}
-              {renderMainContent()}
-            </Container>
-          </Box>
+                {activeTab === 'overview' && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip
+                      label="Target: 95% Attendance"
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontWeight: 600, fontSize: '0.75rem', height: 26 }}
+                    />
+                    <Chip
+                      label="Live Data"
+                      size="small"
+                      color="success"
+                      sx={{ fontWeight: 600, fontSize: '0.75rem', height: 26 }}
+                    />
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {renderMainContent()}
+          </Container>
         </Box>
       </Box>
 
-      {/* New Hire Requisition Modal */}
+      {/* Add Employee Dialog */}
       <Dialog
         open={newHireDialogOpen}
         onClose={() => setNewHireDialogOpen(false)}
@@ -545,11 +692,11 @@ export const App: React.FC = () => {
       >
         <form onSubmit={handleNewHireSubmit}>
           <DialogTitle sx={{ fontWeight: 600, pb: 1, fontSize: '1.05rem' }}>
-            Initiate New Hire Requisition
+            Add New Employee
           </DialogTitle>
           <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '12px !important' }}>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Create an onboarding dossier for a newly hired employee or approved headcount allocation.
+              Enter details to add a new employee to the workforce directory.
             </Typography>
 
             <TextField
@@ -613,13 +760,13 @@ export const App: React.FC = () => {
               color="primary"
               size="small"
             >
-              Complete Onboarding
+              Add Employee
             </Button>
           </DialogActions>
         </form>
       </Dialog>
 
-      {/* Interactive Global Snackbar Feedback */}
+      {/* Global Snackbar Feedback */}
       <Snackbar
         open={Boolean(snackbarMessage)}
         autoHideDuration={4000}
@@ -641,7 +788,60 @@ export const App: React.FC = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-    </ThemeProvider>
+    </Box>
+  );
+};
+
+const AppContent: React.FC<{
+  mode: 'light' | 'dark';
+  onToggleMode: () => void;
+}> = ({ mode, onToggleMode }) => {
+  const navigate = useNavigate();
+  const { isLoading: authLoading } = useAuth();
+
+  if (authLoading) {
+    return <AuthLoadingScreen />;
+  }
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginRoute><LoginPage /></LoginRoute>} />
+      <Route element={<RequireAuthentication />}>
+        <Route
+          path="/access-denied"
+          element={<AccessDeniedPage onGoHome={() => navigate('/')} />}
+        />
+        <Route path="*" element={<ProtectedWorkspaceRoute mode={mode} onToggleMode={onToggleMode} />} />
+      </Route>
+    </Routes>
+  );
+};
+
+export const App: React.FC = () => {
+  const [mode, setMode] = useState<'light' | 'dark'>(getInitialMode);
+  const theme = useMemo(() => createAppTheme(mode), [mode]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('wfa-color-mode', mode);
+    } catch {
+      /* no-op */
+    }
+  }, [mode]);
+
+  const handleToggleMode = () => {
+    setMode((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
+  return (
+    <BrowserRouter>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <AppContent mode={mode} onToggleMode={handleToggleMode} />
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 };
 

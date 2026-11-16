@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3';
+import bcrypt from 'bcryptjs';
 import { getDb } from '../database/connection';
 import type { EmployeeWithDepartment, EmployeeFilterOptions } from '../types';
 
@@ -32,6 +33,7 @@ export class EmployeeRepository {
       page = 1,
       limit = 20,
       search,
+      employeeId,
       department,
       location,
       status,
@@ -41,6 +43,11 @@ export class EmployeeRepository {
 
     const whereClauses: string[] = [];
     const params: (string | number)[] = [];
+
+    if (employeeId !== undefined) {
+      whereClauses.push('e.id = ?');
+      params.push(employeeId);
+    }
 
     // Search filter (name, code, email)
     if (search && search.trim() !== '') {
@@ -183,10 +190,21 @@ export class EmployeeRepository {
     return (stmt.get() as { c: number }).c;
   }
 
-  public findLocations(): string[] {
+  public findLocations(options: { employeeId?: number; department?: string } = {}): string[] {
+    const whereClauses: string[] = [];
+    const params: (string | number)[] = [];
+    if (options.employeeId !== undefined) {
+      whereClauses.push('e.id = ?');
+      params.push(options.employeeId);
+    }
+    if (options.department) {
+      whereClauses.push('e.department_id = ?');
+      params.push(Number(options.department));
+    }
+    const whereSql = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
     const rows = this.db
-      .prepare('SELECT DISTINCT location FROM employees ORDER BY location COLLATE NOCASE')
-      .all() as { location: string }[];
+      .prepare(`SELECT DISTINCT e.location FROM employees e ${whereSql} ORDER BY e.location COLLATE NOCASE`)
+      .all(...params) as { location: string }[];
     return rows.map((row) => row.location);
   }
 
@@ -298,6 +316,49 @@ export class EmployeeRepository {
       } catch {
         // ignore duplicate or non-critical attendance insert error
       }
+    }
+
+    // Auto-provision user account in SQLite users table for each employee
+    try {
+      const existingUser = this.db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+      if (!existingUser) {
+        let assignedRole = 'employee';
+        const lowerTitle = jobTitle.toLowerCase();
+        if (
+          lowerTitle.includes('director') ||
+          lowerTitle.includes('vp') ||
+          lowerTitle.includes('head of') ||
+          lowerTitle.includes('chief')
+        ) {
+          assignedRole = 'manager';
+        } else if (lowerTitle.includes('lead') || lowerTitle.includes('supervisor')) {
+          assignedRole = 'team_lead';
+        } else if (
+          data.department?.toLowerCase().includes('hr') ||
+          data.department_name?.toLowerCase().includes('human resources')
+        ) {
+          assignedRole = 'hr';
+        }
+
+        const usernameBase = `${cleanFirst.toLowerCase()}_${cleanLast.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+        let candidateUsername = usernameBase;
+        let counter = 1;
+        while (this.db.prepare('SELECT id FROM users WHERE username = ?').get(candidateUsername)) {
+          counter += 1;
+          candidateUsername = `${usernameBase}${counter}`;
+        }
+
+        const defaultPassword = `${cleanFirst.charAt(0).toUpperCase() + cleanFirst.slice(1).toLowerCase()}@123456`;
+        const passwordHash = bcrypt.hashSync(defaultPassword, 10);
+        this.db
+          .prepare(
+            `INSERT INTO users (username, email, password_hash, role, employee_id, is_active)
+             VALUES (?, ?, ?, ?, ?, 1)`
+          )
+          .run(candidateUsername, email, passwordHash, assignedRole, newEmpId);
+      }
+    } catch (provisionErr) {
+      console.warn('Auto employee user provisioning notice:', provisionErr);
     }
 
     const created = this.findById(newEmpId);
