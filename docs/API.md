@@ -54,6 +54,27 @@ All endpoints return a uniform JSON envelope format.
 
 ---
 
+## Role-Based Access Control
+
+All business endpoints require a valid access token. Authorization is enforced
+on the server using the permissions returned by `GET /api/auth/me`; hiding a
+navigation item in the frontend does not grant or deny API access.
+
+| Role | Employee data | Attendance data | Employee changes | Other access |
+|---|---|---|---|---|
+| Admin | All employees | All attendance | Create, update, delete | User management, audit logs, sessions, exports |
+| HR | All employees | All attendance | Create and update | Exports |
+| Manager | Linked department | Linked department | Read only | Department-scoped dashboard |
+| Team Lead | Linked department | Linked department | Read only | Department-scoped dashboard |
+| Employee | Own linked profile | Own attendance | Read own profile | Personal dashboard and security settings |
+
+Manager and Team Lead scope is the department linked to the account because the
+current schema does not model team membership. Employee and department filters
+provided in requests cannot expand the authenticated user's scope. Scoped
+accounts without a linked employee profile receive `403 FORBIDDEN`.
+
+---
+
 ## 2. Health & System
 
 ### `GET /api/health`
@@ -81,6 +102,9 @@ Checks server availability, uptime, and database connectivity.
 
 ### `GET /api/dashboard/summary`
 Calculates the 5 primary KPI cards for the selected date and filters.
+
+The results are scoped to the authenticated user's linked department or employee
+profile. Admin and HR accounts can query company-wide data.
 
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |
@@ -124,6 +148,9 @@ Calculates the 5 primary KPI cards for the selected date and filters.
 ### `GET /api/dashboard/attendance`
 Returns date-grouped attendance status counts and attendance rates.
 
+Results use the same role-based department or employee scope as dashboard
+summary data.
+
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |
 |---|---|:---:|---|---|
@@ -164,6 +191,8 @@ Returns date-grouped attendance status counts and attendance rates.
 
 ### `GET /api/dashboard/distribution`
 Returns SQLite-backed employee breakdowns by department and employment status across all employee records. Search and optional status filters use the same employee population as the summary and directory endpoints.
+
+Results use the authenticated user's scope; filters cannot expand it.
 
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |
@@ -208,6 +237,10 @@ Returns SQLite-backed employee breakdowns by department and employment status ac
 
 ### `GET /api/employees`
 Lists paginated employee records supporting server-side searching, multi-field filtering, and bidirectional sorting.
+
+Admin and HR can read all employees, Manager and Team Lead are restricted to
+their linked department, and Employee accounts can read only their own linked
+profile. Caller-supplied department filters never expand this scope.
 
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |
@@ -435,6 +468,9 @@ Exports all employee records as a standard UTF-8 RFC 4180 CSV file with `Content
 ### `GET /api/departments`
 Lists all active organizational departments.
 
+Manager, Team Lead, and Employee accounts receive only their linked department.
+Admin and HR accounts receive the full department list.
+
 **Response (HTTP 200)**:
 ```json
 {
@@ -466,17 +502,26 @@ Lists all active organizational departments.
 ### `GET /api/attendance`
 Retrieves paginated daily attendance records.
 
+Admin and HR can read all attendance, Manager and Team Lead are restricted to
+their linked department, and Employee accounts can read only their own records.
+
 **Query Parameters**:
 | Parameter | Type | Required | Default | Description |
 |---|---|:---:|---|---|
 | `page` | `number` | No | 1 | Page number (>= 1) |
 | `limit` | `number` | No | 20 | Records per page (1 to 100) |
 | `employeeId` | `number` | No | - | Filter by employee ID |
-| `departmentId` | `number` | No | - | Filter by department ID |
+| `department` | `string` | No | - | Filter by department name or ID |
 | `date` | `string` | No | - | Single date filter (`YYYY-MM-DD`) |
 | `startDate` | `string` | No | - | Range start date (`YYYY-MM-DD`) |
 | `endDate` | `string` | No | - | Range end date (`YYYY-MM-DD`) |
+| `department` | `string` | No | - | Department name or ID |
+| `location` | `string` | No | - | Employee office location |
+| `employeeStatus` | `string` | No | - | `Active`, `On Leave`, `Terminated`, or `Suspended` |
+| `search` | `string` | No | - | Match employee name, code, or email |
 | `status` | `string` | No | - | `Present`, `Absent`, `On Leave` |
+| `sortBy` | `string` | No | `attendance_date` | Supported attendance column |
+| `sortOrder` | `string` | No | `desc` | `asc` or `desc` |
 
 **Response (HTTP 200)**:
 ```json
@@ -492,8 +537,8 @@ Retrieves paginated daily attendance records.
       "department_name": "Engineering",
       "attendance_date": "2026-10-30",
       "status": "Present",
-      "check_in_time": "08:45:00",
-      "check_out_time": "17:30:00",
+      "check_in_time": "2026-10-30T08:45:00.000Z",
+      "check_out_time": "2026-10-30T17:30:00.000Z",
       "created_at": "2026-10-30T08:45:00.000Z",
       "updated_at": "2026-10-30T08:45:00.000Z"
     }
@@ -507,3 +552,74 @@ Retrieves paginated daily attendance records.
   "timestamp": "2026-10-30T12:00:00.000Z"
 }
 ```
+
+---
+
+## 7. Authentication & Sessions
+
+Protected endpoints require an access token in the `Authorization` header:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Passwords are stored as bcrypt hashes. Access tokens are short-lived JWTs;
+refresh tokens are rotated on every successful refresh. Reuse of a rotated
+refresh token revokes its token family and sessions.
+
+### `POST /api/auth/login`
+Request:
+```json
+{ "email": "user@example.com", "password": "your-password" }
+```
+
+Without MFA, `data` contains `accessToken`, `refreshToken`, `expiresIn`, and
+the safe user profile. When MFA is enabled, `data` instead contains
+`requiresMfa: true` and a short-lived `mfaToken`.
+
+### `POST /api/auth/login/mfa`
+Complete an MFA challenge with a TOTP or one-time backup code:
+```json
+{ "mfa_token": "<short-lived-challenge>", "code": "123456" }
+```
+Successful verification returns the access and refresh token pair. Backup
+codes are single-use.
+
+### `POST /api/auth/refresh`
+Rotate the refresh token and receive a new token pair:
+```json
+{ "refresh_token": "<refreshToken>" }
+```
+The submitted token is invalidated as part of rotation.
+
+### `POST /api/auth/logout`
+Requires authentication. Revokes the current session and its refresh tokens.
+The request may include `{ "refresh_token": "<refreshToken>" }`.
+
+### `GET /api/auth/me`
+Requires authentication. Returns the current safe user profile and permissions.
+
+### `PUT /api/auth/password`
+Requires authentication. Changes the password after verifying the current
+password, then terminates all of the user's sessions.
+```json
+{ "current_password": "current", "new_password": "NewPassword123" }
+```
+
+### MFA management
+- `POST /api/auth/mfa/setup` — create a TOTP secret and QR code.
+- `POST /api/auth/mfa/verify` — confirm setup with `{ "code": "123456" }`;
+  returns one-time backup codes.
+- `POST /api/auth/mfa/disable` — disable MFA after confirming the password.
+
+TOTP secrets are encrypted at rest. Backup codes are stored as hashes.
+Enabling or disabling MFA revokes the user's other sessions.
+
+### Session management
+- `GET /api/auth/sessions` — list the caller's sessions; administrators can
+  list sessions across users.
+- `DELETE /api/auth/sessions/:id` — revoke an owned session or, for an
+  administrator, any session.
+
+Session responses do not include session bearer secrets. Demo-account
+discovery and demo seeding are development-only.

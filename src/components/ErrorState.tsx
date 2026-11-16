@@ -11,10 +11,10 @@ interface ErrorStateProps {
 }
 
 export const ErrorState: React.FC<ErrorStateProps> = ({
-  title = 'Failed to load workforce analytics data',
-  message = 'An unexpected network error occurred while querying the telemetry service. Please check your connection or retry.',
+  title = 'Failed to load workforce data',
+  message = 'An unexpected error occurred while loading dashboard data. Please check your connection or retry.',
   onRetry,
-  actionText = 'Retry connection',
+  actionText = 'Retry',
 }) => {
   const theme = useTheme();
 

@@ -18,8 +18,25 @@ This document details the persistence layer of the **Workforce Analytics Platfor
 
 ```mermaid
 erDiagram
+    ROLES ||--o{ ROLE_PERMISSIONS : "grants"
+    PERMISSIONS ||--o{ ROLE_PERMISSIONS : "assigned through"
     DEPARTMENTS ||--o{ EMPLOYEES : "employs"
     EMPLOYEES ||--o{ ATTENDANCE : "logs attendance for"
+
+    ROLES {
+        TEXT name PK "admin, hr, manager, team_lead, employee"
+        TEXT description "Role summary"
+    }
+
+    PERMISSIONS {
+        TEXT name PK "Granular permission identifier"
+        TEXT description "Permission summary"
+    }
+
+    ROLE_PERMISSIONS {
+        TEXT role_name PK, FK "References roles(name)"
+        TEXT permission_name PK, FK "References permissions(name)"
+    }
 
     DEPARTMENTS {
         INTEGER id PK "AUTOINCREMENT"
@@ -55,6 +72,32 @@ erDiagram
         TEXT updated_at "ISO-8601 Timestamp DEFAULT CURRENT_TIMESTAMP"
     }
 ```
+
+The `users.role` column stores one of the catalogued role names and is
+constrained to the supported role set. Permission grants are normalized in
+`role_permissions`; authenticated user profiles retrieve their grants from
+SQLite rather than relying on a permissions list stored on each user.
+
+The application schema initializes all twelve tables in SQLite:
+
+| Table | Data stored |
+|---|---|
+| `roles` | Supported account roles |
+| `permissions` | Fine-grained authorization capabilities |
+| `role_permissions` | Role-to-permission grants |
+| `departments` | Workforce department records |
+| `employees` | Employee profiles and employment details |
+| `attendance` | Daily employee attendance and check-in/out times |
+| `users` | Account credentials, role, MFA state, and lockout state |
+| `refresh_tokens` | Hashed refresh tokens and rotation families |
+| `mfa_login_challenges` | One-time MFA login challenges |
+| `login_attempts` | Authentication attempt and lockout audit data |
+| `audit_logs` | Authentication, authorization, and administrative events |
+| `user_sessions` | Active sessions and revocation state |
+
+Employee, attendance, department, account, session, MFA, login-attempt, audit,
+role, and permission records are persisted in SQLite; the frontend does not
+serve as their data store.
 
 ---
 
@@ -186,17 +229,11 @@ The database seeder (`backend/src/database/seed.ts`) populates realistic enterpr
 - **30 Days of Attendance**: Historical records for non-terminated employees, including present, absent, and on-leave status counts.
 
 ### Idempotency Guarantee
-The seeder runs inside an atomic transaction:
-```ts
-const insertEmployee = db.prepare(`
-  INSERT INTO employees (...) VALUES (...)
-  ON CONFLICT(employee_code) DO UPDATE SET
-    first_name=excluded.first_name,
-    last_name=excluded.last_name,
-    job_title=excluded.job_title
-`);
-```
-This ensures running `npm run server:seed` multiple times safely updates records without generating duplicate key collisions or bloating the database.
+Database initialization creates tables and indexes with `IF NOT EXISTS` and
+inserts role, permission, and role-permission catalog rows with
+`INSERT OR IGNORE`. The demo seeder uses SQLite inserts/upserts in transactions
+for departments, employees, attendance, and demo accounts. Seeding demo data is
+disabled in production.
 
 ---
 

@@ -1,6 +1,5 @@
 /**
  * API Contracts & Response Standards
- * Standard envelope used across all backend REST endpoints in Sprint 2.
  */
 
 export interface ApiResponse<T> {
@@ -80,6 +79,9 @@ export interface AttendanceFilterParams extends PaginationParams {
   startDate?: string;
   endDate?: string;
   department?: string;
+  location?: string;
+  employeeStatus?: string;
+  search?: string;
   departmentId?: string;
   workMode?: 'In-Office' | 'Remote';
   status?: string;

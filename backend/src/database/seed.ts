@@ -1,5 +1,7 @@
 import type Database from 'better-sqlite3';
+import bcrypt from 'bcryptjs';
 import { getDb } from './connection';
+import { config } from '../config/env';
 
 export interface SeedOptions {
   db?: Database.Database;
@@ -60,7 +62,12 @@ export const seedDatabase = (options: SeedOptions = {}): {
   departmentsCount: number;
   employeesCount: number;
   attendanceCount: number;
+  usersCount: number;
 } => {
+  if (config.NODE_ENV === 'production') {
+    throw new Error('Demo database seeding is disabled in production.');
+  }
+
   const db = options.db || getDb();
   const daysBack = options.daysBack ?? 30;
   const quiet = options.quiet ?? false;
@@ -92,21 +99,19 @@ export const seedDatabase = (options: SeedOptions = {}): {
     deptMap.set(d.name, d.id);
   }
 
-  // 2. Seed Employees (idempotent)
-  const insertEmp = db.prepare(`
+  // 2. Seed Employees (safe conflict resolution by email or code)
+  const findEmpStmt = db.prepare('SELECT id FROM employees WHERE email = ? OR employee_code = ? LIMIT 1');
+  const updateEmpStmt = db.prepare(`
+    UPDATE employees SET
+      first_name = ?, last_name = ?, department_id = ?, location = ?,
+      job_title = ?, employment_status = ?, hire_date = ?
+    WHERE id = ?
+  `);
+  const insertEmpStmt = db.prepare(`
     INSERT INTO employees (
       employee_code, first_name, last_name, email, department_id,
       location, job_title, employment_status, hire_date
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(employee_code) DO UPDATE SET
-      first_name = excluded.first_name,
-      last_name = excluded.last_name,
-      email = excluded.email,
-      department_id = excluded.department_id,
-      location = excluded.location,
-      job_title = excluded.job_title,
-      employment_status = excluded.employment_status,
-      hire_date = excluded.hire_date
   `);
 
   const seedEmpsTx = db.transaction(() => {
@@ -114,27 +119,49 @@ export const seedDatabase = (options: SeedOptions = {}): {
       const code = `EMP-${String(idx + 1).padStart(3, '0')}`;
       const email = `${tmpl.first.toLowerCase()}.${tmpl.last.toLowerCase().replace(/[^a-z]/g, '')}@stackly.internal`;
       const deptId = deptMap.get(tmpl.dept) || depts[0].id;
-      insertEmp.run(
-        code,
-        tmpl.first,
-        tmpl.last,
-        email,
-        deptId,
-        tmpl.loc,
-        tmpl.role,
-        tmpl.status,
-        tmpl.hire
-      );
+
+      const existing = findEmpStmt.get(email, code) as { id: number } | undefined;
+      if (existing) {
+        updateEmpStmt.run(
+          tmpl.first,
+          tmpl.last,
+          deptId,
+          tmpl.loc,
+          tmpl.role,
+          tmpl.status,
+          tmpl.hire,
+          existing.id
+        );
+      } else {
+        insertEmpStmt.run(
+          code,
+          tmpl.first,
+          tmpl.last,
+          email,
+          deptId,
+          tmpl.loc,
+          tmpl.role,
+          tmpl.status,
+          tmpl.hire
+        );
+      }
     });
   });
   seedEmpsTx();
 
-  // Retrieve employees: id, employment_status
-  const employees = db.prepare('SELECT id, employee_code, employment_status FROM employees').all() as {
+  // Retrieve employees
+  const employees = db.prepare('SELECT id, employee_code, first_name, last_name, employment_status FROM employees').all() as {
     id: number;
     employee_code: string;
+    first_name: string;
+    last_name: string;
     employment_status: string;
   }[];
+
+  const empByFirstLast = new Map<string, number>();
+  for (const emp of employees) {
+    empByFirstLast.set(`${emp.first_name} ${emp.last_name}`, emp.id);
+  }
 
   // 3. Seed Attendance Records across past daysBack days (idempotent)
   const insertAttendance = db.prepare(`
@@ -191,16 +218,154 @@ export const seedDatabase = (options: SeedOptions = {}): {
   });
   seedAttendanceTx();
 
+  // 4. Seed Default Users with RBAC Roles & Individual Logins for Every Employee (idempotent)
+  const findUserStmt = db.prepare('SELECT id FROM users WHERE email = ? OR username = ? LIMIT 1');
+  const updateUserStmt = db.prepare(`
+    UPDATE users SET
+      password_hash = ?, role = ?, employee_id = ?, is_active = 1
+    WHERE id = ?
+  `);
+  const updateUserWithActiveStmt = db.prepare(`
+    UPDATE users SET
+      password_hash = ?, role = ?, employee_id = ?, is_active = ?
+    WHERE id = ?
+  `);
+  const insertUserStmt = db.prepare(`
+    INSERT INTO users (
+      username, email, password_hash, role, employee_id, is_active, mfa_enabled, failed_login_attempts
+    ) VALUES (?, ?, ?, ?, ?, 1, 0, 0)
+  `);
+  const insertUserWithActiveStmt = db.prepare(`
+    INSERT INTO users (
+      username, email, password_hash, role, employee_id, is_active, mfa_enabled, failed_login_attempts
+    ) VALUES (?, ?, ?, ?, ?, ?, 0, 0)
+  `);
+
+  const userSeeds = [
+    {
+      username: 'admin',
+      email: 'admin@workforce.com',
+      password: 'Admin@123456',
+      role: 'admin',
+      employeeId: null,
+    },
+    {
+      username: 'hr_amara',
+      email: 'hr@workforce.com',
+      password: 'Hr@123456',
+      role: 'hr',
+      employeeId: empByFirstLast.get('Amara Okafor') || null,
+    },
+    {
+      username: 'mgr_marcus',
+      email: 'manager@workforce.com',
+      password: 'Manager@123456',
+      role: 'manager',
+      employeeId: empByFirstLast.get('Marcus Chen') || null,
+    },
+    {
+      username: 'lead_zainab',
+      email: 'lead@workforce.com',
+      password: 'Lead@123456',
+      role: 'team_lead',
+      employeeId: empByFirstLast.get('Zainab Al-Mansoor') || null,
+    },
+    {
+      username: 'emp_sarah',
+      email: 'employee@workforce.com',
+      password: 'Employee@123456',
+      role: 'employee',
+      employeeId: empByFirstLast.get('Sarah Jenkins') || null,
+    },
+  ];
+
+  // Retrieve all seeded employees to create their separate user logins
+  const allEmployees = db.prepare(`
+    SELECT e.id, e.first_name, e.last_name, e.email, e.job_title, e.employment_status, d.name as dept_name
+    FROM employees e
+    JOIN departments d ON e.department_id = d.id
+    ORDER BY e.id ASC
+  `).all() as Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    job_title: string;
+    employment_status: string;
+    dept_name: string;
+  }>;
+
+  const employeeUserSeeds = allEmployees.map((emp) => {
+    const cleanFirst = emp.first_name.trim();
+    const cleanLast = emp.last_name.trim();
+    const username = `${cleanFirst.toLowerCase()}_${cleanLast.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+
+    let role: 'admin' | 'hr' | 'manager' | 'team_lead' | 'employee';
+    const title = emp.job_title.toLowerCase();
+    const dept = emp.dept_name.toLowerCase();
+
+    if (title.includes('principal security engineer') || title.includes('system admin') || (title.includes('infrastructure') && cleanFirst === 'Emily')) {
+      role = 'admin';
+    } else if (dept.includes('human resources') || title.includes('talent')) {
+      role = 'hr';
+    } else if (title.includes('director') || title.includes('vp') || title.includes('head') || title.includes('manager')) {
+      role = 'manager';
+    } else if (title.includes('lead') || title.includes('architect')) {
+      role = 'team_lead';
+    } else {
+      role = 'employee';
+    }
+
+    const defaultPass = `${cleanFirst.charAt(0).toUpperCase() + cleanFirst.slice(1).toLowerCase()}@123456`;
+    const isActive = emp.employment_status === 'Terminated' ? 0 : 1;
+
+    return {
+      username,
+      email: emp.email,
+      password: defaultPass,
+      role,
+      employeeId: emp.id,
+      isActive,
+    };
+  });
+
+  const seedUsersTx = db.transaction(() => {
+    // 1. System demo role accounts
+    for (const u of userSeeds) {
+      const passwordHash = bcrypt.hashSync(u.password, 10);
+      const existingUser = findUserStmt.get(u.email, u.username) as { id: number } | undefined;
+      if (existingUser) {
+        updateUserStmt.run(passwordHash, u.role, u.employeeId, existingUser.id);
+      } else {
+        insertUserStmt.run(u.username, u.email, passwordHash, u.role, u.employeeId);
+      }
+    }
+
+    // 2. Individual login accounts for every employee
+    for (const u of employeeUserSeeds) {
+      const passwordHash = bcrypt.hashSync(u.password, 10);
+      const existingUser = findUserStmt.get(u.email, u.username) as { id: number } | undefined;
+      if (existingUser) {
+        updateUserWithActiveStmt.run(passwordHash, u.role, u.employeeId, u.isActive, existingUser.id);
+      } else {
+        insertUserWithActiveStmt.run(u.username, u.email, passwordHash, u.role, u.employeeId, u.isActive);
+      }
+    }
+  });
+  seedUsersTx();
+
   const counts = {
     departmentsCount: (db.prepare('SELECT COUNT(*) as c FROM departments').get() as { c: number }).c,
     employeesCount: (db.prepare('SELECT COUNT(*) as c FROM employees').get() as { c: number }).c,
     attendanceCount: (db.prepare('SELECT COUNT(*) as c FROM attendance').get() as { c: number }).c,
+    usersCount: (db.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number }).c,
   };
 
   log(`Database seeded successfully!`);
   log(`- Departments: ${counts.departmentsCount}`);
   log(`- Employees: ${counts.employeesCount}`);
   log(`- Attendance records: ${counts.attendanceCount}`);
+  log(`- Users (RBAC): ${counts.usersCount}`);
 
   return counts;
 };

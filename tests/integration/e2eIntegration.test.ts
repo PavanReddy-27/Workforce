@@ -1,11 +1,52 @@
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
+import type { Server } from 'node:http';
 import { expect } from '../helpers/expect';
-import { dashboardService } from '../../src/services/dashboard.service';
-import { employeeService } from '../../src/services/employees.service';
-import { departmentService } from '../../src/services/departments.service';
-import { attendanceService } from '../../src/services/attendance.service';
+import {
+  dashboardService,
+  employeeService,
+  departmentService,
+  attendanceService,
+  authService,
+} from '../../src/services';
+import { httpClient } from '../../src/services/api/httpClient';
+import { createApp } from '../../backend/src/app';
+import { getDb } from '../../backend/src/database/connection';
+import { seedDatabase } from '../../backend/src/database/seed';
 
 describe('Live End-to-End Frontend-Backend Integration Tests', () => {
+  let server: Server;
+  let port: number;
+
+  before(async () => {
+    // Ensure DB is initialized and seeded
+    const db = getDb();
+    seedDatabase({ db, daysBack: 30, quiet: true });
+
+    const app = createApp();
+    await new Promise<void>((resolve) => {
+      server = app.listen(0, () => {
+        const addr = server.address();
+        if (typeof addr === 'object' && addr !== null) {
+          port = addr.port;
+        }
+        resolve();
+      });
+    });
+
+    // Reconfigure httpClient to use the live test server
+    httpClient.setBaseUrl(`http://localhost:${port}/api`);
+
+    // Authenticate as Admin so all protected REST endpoints succeed
+    const loginRes = await authService.login('admin@workforce.com', 'Admin@123456');
+    expect(loginRes.success).toBe(true);
+  });
+
+  after(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
   it('should fetch real KPI summary from running backend', async () => {
     const summaryRes = await dashboardService.getSummary({
       department: 'All Departments',
@@ -71,7 +112,7 @@ describe('Live End-to-End Frontend-Backend Integration Tests', () => {
 
     expect(deptRes.success).toBe(true);
     expect(deptRes.data.length).toBe(6);
-    const names = deptRes.data.map((d) => d.name);
+    const names = deptRes.data.map((d: { name: string }) => d.name);
     expect(names).toContain('Engineering');
     expect(names).toContain('Product & Design');
     expect(names).toContain('Finance & Legal');
@@ -94,7 +135,7 @@ describe('Live End-to-End Frontend-Backend Integration Tests', () => {
     // 3. Department filter
     const deptFilterRes = await employeeService.getEmployees({ department: 'Engineering' });
     expect(deptFilterRes.success).toBe(true);
-    expect(deptFilterRes.data.every((e) => e.department_name === 'Engineering')).toBe(true);
+    expect(deptFilterRes.data.every((e: { department_name?: string }) => e.department_name === 'Engineering')).toBe(true);
 
     // 4. Sorting
     const sortRes = await employeeService.getEmployees({
@@ -147,19 +188,19 @@ describe('Live End-to-End Frontend-Backend Integration Tests', () => {
   it('should safely escape special SQL wildcard characters in employee search', async () => {
     const wildcardRes = await employeeService.getEmployees({ search: '%_' });
     expect(wildcardRes.success).toBe(true);
-    // Should safely treat % and _ as literal strings rather than SQL wildcards
     expect(Array.isArray(wildcardRes.data)).toBe(true);
   });
 
   it('should return 404 error when requesting a non-existent employee ID', async () => {
     try {
       await employeeService.getEmployeeById(999999);
-      expect.fail('Expected 404 error for non-existent employee ID');
     } catch (err: unknown) {
       const error = err as { status?: number; code?: string };
       expect(error.status).toBe(404);
       expect(error.code).toBe('EMPLOYEE_NOT_FOUND');
+      return;
     }
+    expect.fail('Expected 404 error for non-existent employee ID');
   });
 
   it('should deduplicate department requests using in-memory cache', async () => {

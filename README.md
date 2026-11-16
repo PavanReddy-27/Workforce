@@ -1,331 +1,276 @@
-# Workforce Analytics Platform
+# Workforce Analytics Platform (WFA)
+## Authentication, Authorization & Role-Based Access Control (RBAC) Module
 
-An enterprise-grade, full-stack Workforce Analytics Platform providing SQLite-backed headcount metrics, attendance trends, organizational distribution, and server-side employee directory operations. Built with React, TypeScript, Material UI, Recharts, Express, and SQLite using the Repository Pattern.
+An enterprise-grade, full-stack Workforce Analytics Platform with hardened SQLite-backed authentication, granular Role-Based Access Control (RBAC), multi-factor authentication (TOTP MFA), refresh token rotation, account lockout defense, audit logging, and role-adaptive dashboards.
 
----
+Built with **React 19**, **TypeScript**, **Material UI**, **Recharts**, **Express**, and **SQLite** using the Repository Pattern.
 
-## 1. Project Overview
+## Technical documentation
 
-The **Workforce Analytics Platform** provides HR leaders, department heads, and operations executives with an operational dashboard for monitoring staff headcount, recorded daily attendance statuses, business unit distributions, and employee directory records.
-
-### Key Capabilities
-- **Operational Headcount & Presence KPIs**: Real-time evaluation of total employee records across employment statuses, today's attendance rates, present/absent ratios, and approved leaves.
-- **Attendance Trends**: Historical time-series analytics for recorded present, absent, and on-leave counts, with an attendance-rate view.
-- **Organizational Distribution**: SQLite-backed employee headcount by department and current employment status.
-- **Enterprise Employee Directory**: Server-side searching, multi-field filtering (department, location, status), bidirectional sorting, and fast pagination.
-- **Live Employee Creation**: Add employee form persists supported employee fields to SQLite; contract type, promotion, and audit history are not modeled.
-
----
-
-## 2. Features
-
-| Feature Group | Implemented Functionality |
-|---|---|
-| **Five Primary KPI Cards** | Exactly 5 core metrics (**Total Employees**, **Present Today**, **Absent Today**, **Attendance Rate**, **On Leave**) computed directly via SQL aggregation from live attendance records. |
-| **Attendance Analytics** | Stacked area chart for recorded present, absent, and on-leave counts, with a toggle to view attendance rate over the selected date range. |
-| **Workforce Status Donut** | Donut chart rendering SQLite employment status counts across all employee records, including terminated employees. |
-| **Department Distribution** | SQL-backed bar chart of employee headcount by department. Clicking a bar filters dashboard analytics to that department. |
-| **Recent Hires** | Displays employee records ordered by their persisted hire date; it does not represent promotions, transfers, or a full audit log. |
-| **Employee Directory Table** | Server-side paginated data table featuring 300ms debounced search (matching name, employee code, or email), multi-field dropdown filters, and column sorting. |
-| **Multi-Dimensional Filters** | Dashboard filters for department, location, employment status, attendance date range (`7d`, `30d`, `90d`, `1y`), and employee search. Employee counts and distributions use the same search and workforce filters. Department and location options are loaded from API data. |
-| **Responsive UI & Themes** | Cohesive slate-blue dark mode (`#0F172A`) and crisp off-white light mode (`#F8FAFC`). Fluid layouts for Desktop (5 KPI cols), Tablet (2+2+1 grid), and Mobile (stacked cards + slide-out drawer). |
-| **Resilient State Indicators** | Skeleton loaders during fetch, empty state visual fallbacks with filter reset triggers, and connection error banners with manual retry buttons. |
-| **Persistent SQLite Storage** | Fully persistent relational database (`better-sqlite3`) with foreign key enforcement, B-Tree indexes, and ACID guarantees. |
+- [System architecture](docs/ARCHITECTURE.md) — layers, responsibilities, and data flow.
+- [Database architecture](docs/DATABASE.md) — SQLite schema, relationships, and constraints.
+- [REST API reference](docs/API.md) — endpoints, permissions, and response formats.
+- [Backend setup and security controls](backend/README.md) — configuration, database setup, and security behavior.
+- [Demonstration guide](docs/DEMO-GUIDE.md) — local startup and a guided product walkthrough.
+- [Screenshot evidence guide](docs/screenshots/README.md) — captured views and instructions for saving local PNG files.
 
 ---
 
-## 3. Technology Stack
+## 1. Project Overview & RBAC Core Requirements
 
-### Frontend Client
-- **Framework**: React 19 (`19.3.1`)
-- **Language**: TypeScript (`~6.0.3` / `5.8`)
-- **Tooling & Bundler**: Vite 8 (`8.3.4`)
-- **UI & Design System**: Material UI (`@mui/material` 9.5.0, `@emotion/react` 11.14.0)
-- **Data Visualization**: Recharts (`3.10.1`)
-- **Typography**: Inter (Google Fonts) with tabular numeral support
-- **Icons**: Material UI Outlined Icons (`@mui/icons-material` 9.5.0)
+The **Workforce Analytics Platform (WFA)** delivers secure, role-differentiated workforce intelligence for executives, HR specialists, departmental managers, team leads, and employees.
 
-### Backend API Server
-- **Runtime**: Node.js (LTS / v24)
-- **Framework**: Express (`4.21.2`)
-- **Language**: TypeScript (`5.8.2`)
-- **Database**: SQLite 3 via `better-sqlite3` (`13.0.0`)
-- **Schema Validation**: Zod (`3.24.2`)
-- **Security & Headers**: Helmet (`8.0.0`), CORS (`2.8.5`)
-- **Development & Test**: `tsx` (`4.19.3`), Supertest (`7.0.0`), Node Test Runner (`node:test`)
+### Key Authentication & Authorization Capabilities
+- **Enterprise Authentication**: Secure credential verification, bcrypt password hashing (salt rounds = 12), short-lived JWT access tokens (15-minute expiry), and server-side session validation.
+- **Refresh Token Rotation & Reuse Attack Detection**: Long-lived refresh tokens (7 days) are stored as hashes and rotated within token families. Reuse of a revoked refresh token revokes its family and the user's active sessions.
+- **Multi-Factor Authentication (MFA)**: TOTP authenticator app support (Google Authenticator, Microsoft Authenticator, 1Password) with dynamic QR code generation and one-time emergency backup codes.
+- **Account Lockout & Brute-Force Defense**: 5 consecutive failed login attempts trigger an automatic 15-minute lockout with HTTP 423 feedback and remaining-time counters.
+- **API Rate Limiting**: Intelligent multi-tiered throttling (5 req/min on login, 10 req/min on sensitive operations, 120 req/min on general API routes).
+- **Persistent Security Audit Logging**: Traceability for authentication events, login failures, lockout events, MFA lifecycle events, role changes, and administrative actions.
+- **Live Session Management**: Session tracking with active device/IP attribution and real-time remote session revocation.
+- **Role-Based Access Control (RBAC)**: 5 distinct organizational roles with strict server-side middleware authorization and tailored frontend UI navigation.
 
 ---
 
-## 4. Architecture
+## 2. Role-Based Permissions Matrix
 
-The application adheres to a decoupled, layered architectural pattern. Neither controllers nor UI components contain raw database logic; all queries are encapsulated within dedicated repository classes.
+| Permission Capability | Admin | HR | Manager | Team Lead | Employee |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **View Telemetry Dashboard** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **View All Employees Directory** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **View Department / Team Staff** | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **View Own Employee Profile** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Onboard New Employee** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Update Employee Record** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Delete Employee Record** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **View All Attendance Records** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **View Department Attendance** | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **View Own Attendance History** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Manage Attendance Records** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **View Department Statistics** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Export Personnel Data (CSV)** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **User Account Management** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Security Audit Logs Access** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Active Sessions Governance** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Personal Security Settings** | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-### Request Flow
-```
-Browser / React UI
-   │
-   ▼
-Frontend API Service Layer (`src/services/*`)
-   │  (HTTP / JSON with in-memory caching & request deduplication)
-   ▼
-Express REST API Routes (`backend/src/routes/*`)
-   │  (Helmet security headers, CORS origin whitelist, Zod schema validation)
-   ▼
-Controllers (`backend/src/controllers/*`)
-   │  (Request parsing and HTTP response envelope serialization)
-   ▼
-Business Services (`backend/src/services/*`)
-   │  (Domain logic, business rules, metric computations)
-   ▼
-Repositories (`backend/src/repositories/*`)
-   │  (Parameterized SQL queries, transactions, column whitelisting)
-   ▼
-SQLite Relational Database (`./data/workforce.db`)
-```
+Manager and Team Lead directory, attendance, and dashboard data are restricted
+to the department linked to their employee profile. The current data model does
+not define team membership, so Team Lead scope is department-level. Employee
+records, attendance, and dashboard aggregates are limited to the employee's
+linked profile. API authorization is enforced independently of the frontend
+navigation and ignores broader scope filters supplied by the caller.
 
-### Architectural Diagram
+---
+
+## 3. Seeded Accounts & Quick-Login Credentials
+
+The system comes pre-seeded with 5 accounts covering each RBAC role for testing and evaluation. A one-click **Demo Role Switcher** is also embedded directly in the login portal and top navigation bar.
+
+| Role | Email Address | Password | Assigned Persona & Permissions |
+|---|---|---|---|
+| 👑 **Admin** | `admin@workforce.com` | `Admin@123456` | System Administrator — Full access, User Management, Audit Logs, Sessions |
+| 💼 **HR Specialist** | `hr@workforce.com` | `Hr@123456` | Amara Okafor (VP of Global Talent) — Directory, Onboarding, CSV Export |
+| 📊 **Manager** | `manager@workforce.com` | `Manager@123456` | Marcus Chen (Director of Product) — Department Staff Roster & Attendance |
+| 🚀 **Team Lead** | `lead@workforce.com` | `Lead@123456` | Zainab Al-Mansoor (Frontend Architect) — Team Presence & Directory |
+| 👤 **Employee** | `employee@workforce.com` | `Employee@123456` | Sarah Jenkins (Staff ML Engineer) — Self Dashboard & Personal Attendance |
+
+---
+
+## 4. SQLite Database Architecture & Schema
+
+The relational schema resides in `./data/workforce.db` with strict foreign key constraints (`PRAGMA foreign_keys = ON;`) and WAL journal mode.
+
 ```mermaid
-graph TD
-    subgraph Frontend ["Frontend Client (Vite + React 19 + MUI)"]
-        Dashboard[Dashboard Views & Visualizations]
-        Table[Employee Directory Table]
-        Filters[Dashboard Filter Bar]
-        ClientService[API Service Layer (dashboard, employee, department)]
-        HTTPClient[HttpClient (Fetch Wrapper + Caching)]
-        Dashboard --> ClientService
-        Table --> ClientService
-        Filters --> ClientService
-        ClientService --> HTTPClient
-    end
+erDiagram
+    users ||--o{ refresh_tokens : "owns"
+    users ||--o{ user_sessions : "maintains"
+    users ||--o{ audit_logs : "triggers"
+    departments ||--o{ employees : "employs"
+    employees ||--o{ attendance : "logs attendance"
+    employees ||--o| users : "linked account"
 
-    subgraph Backend ["Backend Service (Node.js + Express + Zod)"]
-        Middleware[Helmet, CORS, Zod Validation]
-        Routes[API Routes (/api/*)]
-        Controllers[Controller Handlers]
-        Services[Business Service Layer]
-        HTTPClient -->|REST / JSON| Middleware
-        Middleware --> Routes
-        Routes --> Controllers
-        Controllers --> Services
-    end
+    users {
+        INTEGER id PK
+        TEXT username UK
+        TEXT email UK
+        TEXT password_hash
+        TEXT role
+        INTEGER employee_id FK
+        INTEGER is_active
+        INTEGER mfa_enabled
+        TEXT mfa_secret
+        TEXT mfa_backup_codes
+        INTEGER failed_login_attempts
+        TEXT locked_until
+        TEXT last_login_at
+    }
 
-    subgraph Data ["Data Layer (Repository Pattern + SQLite)"]
-        Repos[Repositories (Dashboard, Employee, Dept, Attendance)]
-        DB[(SQLite: workforce.db)]
-        Services --> Repos
-        Repos -->|Parameterized SQL| DB
-    end
+    refresh_tokens {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT token_hash UK
+        TEXT family_id
+        TEXT expires_at
+        INTEGER revoked
+        TEXT replaced_by_hash
+    }
+
+    login_attempts {
+        INTEGER id PK
+        TEXT email
+        TEXT ip_address
+        TEXT user_agent
+        INTEGER success
+        TEXT failure_reason
+        TEXT created_at
+    }
+
+    audit_logs {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT action
+        TEXT resource_type
+        TEXT resource_id
+        TEXT details
+        TEXT ip_address
+        TEXT created_at
+    }
+
+    user_sessions {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT session_token UK
+        TEXT ip_address
+        TEXT user_agent
+        INTEGER is_active
+        TEXT last_activity_at
+        TEXT expires_at
+    }
 ```
-
-For comprehensive architectural specifications, refer to [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
-## 5. Prerequisites
+## 5. REST API Reference
 
-- **Node.js**: Version `20.x` or `22.x+` (verified on Node.js v24)
-- **npm**: Version `10.x+`
-- **Operating System**: Windows, macOS, or Linux
+All REST endpoints return standardized response envelopes. Base URL: `http://localhost:3000/api`.
+
+### Authentication & RBAC Routes (`/api/auth/*`)
+
+| Method | Endpoint | Access Level | Description |
+|---|---|---|---|
+| `POST` | `/auth/login` | Public | Authenticates credentials; returns tokens or triggers MFA challenge |
+| `POST` | `/auth/login/mfa` | Public | Validates TOTP code or backup code after MFA challenge |
+| `POST` | `/auth/refresh` | Public | Rotates refresh token and issues new JWT access token |
+| `POST` | `/auth/logout` | Authenticated | Revokes refresh token and terminates active session |
+| `GET` | `/auth/me` | Authenticated | Retrieves current authenticated profile, role, and capabilities |
+| `PUT` | `/auth/password` | Authenticated | Changes user password and revokes all active sessions |
+| `POST` | `/auth/mfa/setup` | Authenticated | Generates TOTP secret and QR code data URL |
+| `POST` | `/auth/mfa/verify` | Authenticated | Verifies authenticator code, activates MFA, and outputs backup codes |
+| `POST` | `/auth/mfa/disable` | Authenticated | Disables MFA with password confirmation |
+| `GET` | `/auth/users` | **Admin Only** | Paginated listing of all registered users and linked staff |
+| `POST` | `/auth/users` | **Admin Only** | Registers a new user with an assigned RBAC role |
+| `PUT` | `/auth/users/:id/role`| **Admin Only** | Modifies user's RBAC role and forces re-authentication |
+| `PUT` | `/auth/users/:id/status`| **Admin Only** | Activates or deactivates an account (immediate session revocation) |
+| `GET` | `/auth/audit-logs` | **Admin Only** | Paginated security audit log trail |
+| `GET` | `/auth/sessions` | Authenticated | Lists active sessions (all for Admin, own for other roles) |
+| `DELETE`| `/auth/sessions/:id` | Authenticated | Revokes and terminates a specific session |
+
+### Core Business Routes (Protected by JWT & RBAC)
+
+| Method | Endpoint | Authorization Rules | Description |
+|---|---|---|---|
+| `GET` | `/health` | Public | Health status and SQLite connectivity check |
+| `GET` | `/dashboard/summary` | All Authenticated | Evaluates 5 primary KPI cards |
+| `GET` | `/dashboard/attendance` | All Authenticated | Time-series presence trends |
+| `GET` | `/dashboard/distribution`| All Authenticated | Departmental and employment status distribution |
+| `GET` | `/departments` | All Authenticated | List departments |
+| `GET` | `/employees` | Admin, HR, Manager, Team Lead | Paginated employee directory |
+| `GET` | `/employees/export` | **Admin, HR Only** | Generates CSV export report |
+| `GET` | `/employees/:id` | Authorized Roles | Fetches single employee record |
+| `POST`| `/employees` | **Admin, HR Only** | Onboards a new employee (HTTP 201) |
+| `PUT` | `/employees/:id` | **Admin, HR Only** | Modifies employee records |
+| `DELETE`| `/employees/:id` | **Admin Only** | Deletes an employee record |
+| `GET` | `/attendance` | Authorized Roles | Daily attendance records |
 
 ---
 
 ## 6. Installation & Execution Guide
 
-The repository contains the frontend client at the root and the backend server in the `backend/` directory.
-
 ### Step 1: Install Dependencies
 ```powershell
-# Install root (frontend) dependencies
+# Install root frontend dependencies
 npm install
 
-# Install backend dependencies
-npm --prefix backend install
+# Install backend dependencies (bcryptjs, jsonwebtoken, otplib, qrcode, express-rate-limit, uuid)
+cd backend
+npm install
+cd ..
 ```
 
-### Step 2: Configure Environment Variables
-Copy the example environment files:
-```powershell
-# Frontend environment
-cp .env.example .env
-
-# Backend environment
-cp backend/.env.example backend/.env
-```
-
-### Step 3: Initialize & Seed the SQLite Database
-The seeding script creates the normalized tables, applies indexes, and seeds 30 employees, 6 departments, and 30 days of attendance:
+### Step 2: Seed SQLite Database
+Initializes tables, creates indexes, and seeds sample departments, employees, attendance, and default RBAC accounts:
 ```powershell
 npm run server:seed
 ```
 
-### Step 4: Start the Applications
-Open two separate terminal windows:
+### Step 3: Run the Application
+Open two terminal windows:
 
-**Terminal 1 — Start the Backend Server**:
+**Terminal 1 — Backend REST API**:
 ```powershell
 npm run server
 ```
-*The REST API server will start on `http://localhost:3000/api`.*
+*Backend runs on `http://localhost:3000/api`.*
 
-**Terminal 2 — Start the Frontend Development Server**:
+**Terminal 2 — Frontend Application**:
 ```powershell
 npm run dev
 ```
-*The Vite frontend will start on `http://localhost:5173`.*
+*Frontend runs on `http://localhost:5173`.*
 
 ---
 
-## 7. Environment Configuration
+## 7. Automated Test Execution & Results
 
-### Frontend (`.env`)
-```bash
-# REST API Base URL
-VITE_API_BASE_URL=http://localhost:3000/api
+Run the unit, integration, and frontend-to-backend end-to-end suites from the repository root:
 
-# Environment mode ('development' | 'production')
-VITE_APP_ENV=development
-```
-
-### Backend (`backend/.env`)
-```bash
-# Server port
-PORT=3000
-
-# Server environment
-NODE_ENV=development
-
-# Allowed CORS origins
-CORS_ORIGIN=http://localhost:5173
-
-# SQLite database file path
-DB_PATH=./data/workforce.db
-
-# Logger level ('debug' | 'info' | 'warn' | 'error')
-LOG_LEVEL=info
-```
-
----
-
-## 8. Database Architecture
-
-The persistence tier consists of 3 relational tables with foreign keys and unique constraints:
-
-```mermaid
-erDiagram
-    departments ||--o{ employees : "employs"
-    employees ||--o{ attendance : "logs attendance"
-
-    departments {
-        INTEGER id PK
-        TEXT name UK
-        TEXT code UK
-        TEXT description
-    }
-    employees {
-        INTEGER id PK
-        TEXT employee_code UK
-        TEXT first_name
-        TEXT last_name
-        TEXT email UK
-        INTEGER department_id FK
-        TEXT location
-        TEXT job_title
-        TEXT employment_status
-        TEXT hire_date
-    }
-    attendance {
-        INTEGER id PK
-        INTEGER employee_id FK
-        TEXT attendance_date
-        TEXT status
-        TEXT check_in_time
-        TEXT check_out_time
-    }
-```
-
-- **Data Integrity**: Enforced via `PRAGMA foreign_keys = ON;`, `CHECK` constraints on valid statuses, and unique constraints on department names, employee codes, emails, and `(employee_id, attendance_date)`.
-- **Indexes**: B-Tree indexes on `department_id`, `location`, `employment_status`, `employee_code`, `attendance_date`, and `status`.
-
-For full DDL statements and migration details, see [docs/DATABASE.md](docs/DATABASE.md).
-
----
-
-## 9. API Reference
-
-All endpoints return uniform response envelopes. Base URL: `http://localhost:3000/api`.
-
-| Method | Endpoint | Description | Key Query / Body Parameters |
-|---|---|---|---|
-| `GET` | `/health` | Server health and database check | None |
-| `GET` | `/dashboard/summary` | Primary 5 KPI metrics | `date`, `department`, `location`, `status`, `search` |
-| `GET` | `/dashboard/attendance` | Date-grouped presence trends | `startDate`, `endDate`, `department`, `location`, `status`, `search` |
-| `GET` | `/dashboard/distribution`| Department & employment status distributions | `department`, `location`, `status`, `search` |
-| `GET` | `/departments` | List all 6 departments | None |
-| `GET` | `/departments/:id` | Fetch department by ID | `id` |
-| `GET` | `/employees` | Paginated employee directory | `page`, `limit`, `search`, `department`, `location`, `status`, `sortBy`, `sortOrder` |
-| `GET` | `/employees/locations` | Distinct locations stored for employees | None |
-| `GET` | `/employees/:id` | Fetch single employee | `id` (numeric or `EMP-001`) |
-| `POST`| `/employees` | Onboard new employee (HTTP 201) | `first_name`, `last_name`, `job_title`, `department`, `location`, `employment_status` |
-| `GET` | `/attendance` | Paginated daily attendance logs | `page`, `limit`, `employeeId`, `date`, `status` |
-
-### KPI Calculation Rules
-- **Total Employees**: Count of all employee records matching department, location, status, and search filters. Without a status filter, this includes all employment statuses.
-- **Present Today**: Count of active staff with status `'Present'` on target date.
-- **Absent Today**: Count of active staff with status `'Absent'` on target date.
-- **On Leave**: Count of active staff with status `'On Leave'` on target date.
-- **Attendance Rate**: `(Present Today / Total Evaluated Records) * 100`. Returns `0%` if zero attendance records exist.
-
-For representative request/response JSON payloads, see [docs/API.md](docs/API.md).
-
----
-
-## 10. Automated Testing & Verification
-
-The project includes unit, repository, service, integration, and E2E test suites with zero external test service dependencies.
-
-### Run Tests
 ```powershell
-# Run frontend client and live E2E integration tests (23 tests)
-npm test
-
-# Run backend unit, repository, and REST integration tests (59 tests)
+# Backend unit and integration tests, including authentication and security controls
 npm run server:test
 
-# Run ESLint across all TypeScript source files
-npm run lint
+# Frontend unit tests and live frontend-service-to-backend end-to-end integration tests
+npm test
 
-# Compile frontend production bundle
+# Build the frontend and backend
 npm run build
-
-# Compile backend production bundle
 npm run server:build
+
+# Lint the project
+npm run lint
 ```
 
-### Verification Results Summary
-- **Backend Tests (`npm run server:test`)**: 59/59 passed
-- **Frontend & Integration Tests (`npm test`)**: 23/23 passed (457ms)
-- **Total Automated Tests**: **82 passed, 0 failed (100% pass rate)**
-- **Static Analysis (`npm run lint`)**: 0 warnings, 0 errors
-- **Production Build (`npm run build`)**: Vite built in 567ms (0 errors)
-- **Backend Build (`npm run server:build`)**: TypeScript compiled cleanly (0 errors)
+### Most recent verification
+
+- Backend: **84 tests passed, 0 failed**.
+- Frontend and live API integration: **27 tests passed, 0 failed**.
+- Browser smoke check: Admin login reached the dashboard and Admin-only account and audit pages; Employee login was denied access to `/audit-logs`.
+- Frontend production build, backend TypeScript build, and lint: **passed**.
+
+The browser smoke check is a manual UI demonstration, separate from the automated
+service-level end-to-end integration tests.
 
 ---
 
-## 11. Known Limitations & Recommendations
+## 8. Technology Stack
 
-1. **SQLite Concurrency**: SQLite operates in single-writer mode. For high-concurrency multi-tenant enterprise deployments, migrating repository classes to PostgreSQL is recommended. The Repository Pattern cleanly isolates all SQL access so that zero business services or UI controllers need modification.
-2. **Offline Sandbox Browser Automation**: Automated headless browser testing (Playwright) is restricted in offline air-gapped sandboxes without pre-cached browser binaries. A comprehensive manual evaluator walkthrough is provided in [docs/DEMO-GUIDE.md](docs/DEMO-GUIDE.md).
-3. **Chunk Size Notice**: Vite emits a standard chunk warning (>500 kB) caused by Recharts and Material UI icon packages. For production optimization, dynamic route-level imports (`React.lazy()`) can be introduced for the employee directory table.
+- **Frontend**: React 19, TypeScript, Material UI 9, Recharts 3, Vite 8
+- **Backend**: Node.js, Express, TypeScript, better-sqlite3, Zod, Helmet, CORS
+- **Security & Auth**: bcryptjs, jsonwebtoken, otplib (TOTP), qrcode, express-rate-limit, uuid
+- **Storage**: SQLite 3 (WAL Mode, Foreign Key Enforcement, B-Tree Indexes)
+- **Testing**: Node.js Built-in Test Runner (`node:test`), tsx, Supertest
 
 ---
 
-## 12. Documentation Index
-
-- [docs/FINAL-RELEASE-CHECKLIST.md](docs/FINAL-RELEASE-CHECKLIST.md) — 62-item release verification checklist.
-- [docs/DEMO-GUIDE.md](docs/DEMO-GUIDE.md) — 5–10 minute live evaluator walkthrough and verification guide.
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Architectural overview, data flow, and design patterns.
-- [docs/DATABASE.md](docs/DATABASE.md) — Relational schema DDL, ERD, indexes, and migration guidelines.
-- [docs/API.md](docs/API.md) — REST API endpoint contracts and JSON envelopes.
-- [docs/SPRINT-4-QA-PLAN.md](docs/SPRINT-4-QA-PLAN.md) — Sprint 4 QA audit, test matrices, and security review.
-- [docs/SPRINT-3-INTEGRATION.md](docs/SPRINT-3-INTEGRATION.md) — Sprint 3 integration architecture.
-- [docs/SPRINT-1-AUDIT.md](docs/SPRINT-1-AUDIT.md) — Sprint 1 frontend architectural audit.
+**Workforce Analytics Platform (WFA)** • Stackly | Amalvia Group
+*“Innovating today, securing tomorrow—your trusted partner in IT solutions.”*

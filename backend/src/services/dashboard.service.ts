@@ -6,6 +6,7 @@ import type {
 } from '../types';
 
 export interface AttendanceTrendQueryOptions {
+  employeeId?: number;
   startDate?: string;
   endDate?: string;
   timeRange?: '7d' | '30d' | '90d' | '1y';
@@ -19,6 +20,7 @@ export class DashboardService {
   constructor(private readonly dashboardRepo: DashboardRepository = new DashboardRepository()) {}
 
   public getSummary(options: {
+    employeeId?: number;
     date?: string;
     department?: string;
     location?: string;
@@ -29,7 +31,7 @@ export class DashboardService {
   }
 
   public getAttendanceTrends(options: AttendanceTrendQueryOptions): AttendanceTrendItem[] {
-    const effectiveEndDate = options.endDate || this.dashboardRepo.getEffectiveDate();
+    const effectiveEndDate = this.dashboardRepo.getEffectiveDate(options.endDate, options);
 
     let startDate = options.startDate;
     if (!startDate) {
@@ -50,10 +52,12 @@ export class DashboardService {
       location: options.location,
       status: options.status,
       search: options.search,
+      employeeId: options.employeeId,
     });
   }
 
   public getWorkforceDistribution(options: {
+    employeeId?: number;
     department?: string;
     location?: string;
     status?: string;

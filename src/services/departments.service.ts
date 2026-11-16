@@ -1,6 +1,5 @@
 /**
- * Centralized Departments API Service
- * Interacts with Sprint 2 REST APIs:
+ * Departments API Service
  * - GET /api/departments
  * - GET /api/departments/:id
  */

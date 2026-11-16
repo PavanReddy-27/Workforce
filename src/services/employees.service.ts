@@ -1,6 +1,5 @@
 /**
- * Centralized Employees API Service
- * Interacts with Sprint 2 REST APIs:
+ * Employees API Service
  * - GET /api/employees (with search, pagination, sorting, and multi-field filters)
  * - GET /api/employees/:id
  * - POST /api/employees

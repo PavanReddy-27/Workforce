@@ -46,11 +46,11 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import FilterListOffIcon from '@mui/icons-material/FilterListOff';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
-import { employeeService } from '../../services/employees.service';
-import { departmentService } from '../../services/departments.service';
+import { employeeService, departmentService } from '../../services';
 import type { BackendEmployee } from '../../types';
 import { EmployeeDetailDialog } from './EmployeeDetailDialog';
 import { exportToCsv } from '../../utils';
+import { useAuth } from '../../context';
 
 export interface EmployeeTableProps {
   initialDepartment?: string;
@@ -73,6 +73,8 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+  const { hasPermission } = useAuth();
+  const canExport = hasPermission('export:data');
 
   // Server state
   const [employees, setEmployees] = useState<BackendEmployee[]>([]);
@@ -395,22 +397,24 @@ export const EmployeeTable: React.FC<EmployeeTableProps> = ({
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            <Tooltip title="Export to CSV">
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<FileDownloadOutlinedIcon sx={{ fontSize: 16 }} />}
-                onClick={handleExportCsv}
-                sx={{
-                  fontSize: '0.75rem',
-                  height: 36,
-                  textTransform: 'none',
-                  borderRadius: '6px',
-                }}
-              >
-                Export CSV
-              </Button>
-            </Tooltip>
+            {canExport && (
+              <Tooltip title="Export to CSV">
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<FileDownloadOutlinedIcon sx={{ fontSize: 16 }} />}
+                  onClick={handleExportCsv}
+                  sx={{
+                    fontSize: '0.75rem',
+                    height: 36,
+                    textTransform: 'none',
+                    borderRadius: '6px',
+                  }}
+                >
+                  Export CSV
+                </Button>
+              </Tooltip>
+            )}
             {isFiltered && (
               <Button
                 size="small"

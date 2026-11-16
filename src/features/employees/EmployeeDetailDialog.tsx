@@ -31,8 +31,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import type { BackendEmployee } from '../../types';
-import { employeeService } from '../../services/employees.service';
-import { departmentService } from '../../services/departments.service';
+import { employeeService, departmentService } from '../../services';
 
 const STATUSES = ['Active', 'On Leave', 'Terminated', 'Suspended'];
 

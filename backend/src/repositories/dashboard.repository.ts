@@ -9,6 +9,7 @@ import type {
 } from '../types';
 
 export interface DashboardFilterCriteria {
+  employeeId?: number;
   date?: string;
   department?: string; // ID or name
   location?: string;
@@ -22,6 +23,11 @@ function buildEmployeeFilters(
 ): { clauses: string[]; params: (string | number)[] } {
   const clauses: string[] = [];
   const params: (string | number)[] = [];
+
+  if (options.employeeId !== undefined) {
+    clauses.push('e.id = ?');
+    params.push(options.employeeId);
+  }
 
   if (options.status || defaultStatus) {
     clauses.push('e.employment_status = ?');
@@ -66,12 +72,22 @@ export class DashboardRepository {
    * Determine the effective date for KPIs:
    * Uses supplied date, or finds the most recent attendance date in DB, or falls back to today.
    */
-  public getEffectiveDate(suppliedDate?: string): string {
+  public getEffectiveDate(suppliedDate?: string, options: DashboardFilterCriteria = {}): string {
     if (suppliedDate) return suppliedDate;
 
+    const employeeFilters = buildEmployeeFilters(options);
+    const whereSql = employeeFilters.clauses.length
+      ? `WHERE ${employeeFilters.clauses.join(' AND ')}`
+      : '';
     const row = this.db
-      .prepare('SELECT MAX(attendance_date) as max_date FROM attendance')
-      .get() as { max_date: string | null };
+      .prepare(`
+        SELECT MAX(a.attendance_date) as max_date
+        FROM attendance a
+        JOIN employees e ON a.employee_id = e.id
+        LEFT JOIN departments d ON e.department_id = d.id
+        ${whereSql}
+      `)
+      .get(...employeeFilters.params) as { max_date: string | null };
 
     if (row && row.max_date) {
       return row.max_date;
@@ -89,7 +105,7 @@ export class DashboardRepository {
    * - Attendance Rate: Present / (Recorded Active Employees) * 100
    */
   public getSummaryKpis(options: DashboardFilterCriteria): DashboardSummaryKpis {
-    const effectiveDate = this.getEffectiveDate(options.date);
+    const effectiveDate = this.getEffectiveDate(options.date, options);
 
     const employeeFilters = buildEmployeeFilters(options);
     const empWhereSql = employeeFilters.clauses.length
@@ -164,6 +180,7 @@ export class DashboardRepository {
    * Date-grouped attendance trends over a date range
    */
   public getAttendanceTrends(options: {
+    employeeId?: number;
     startDate: string;
     endDate: string;
     department?: string;

@@ -72,6 +72,7 @@ export interface PaginatedResult<T> {
 }
 
 export interface EmployeeFilterOptions extends PaginationParams {
+  employeeId?: number;
   search?: string;
   department?: string; // ID or Name
   location?: string;
@@ -92,6 +93,9 @@ export interface AttendanceFilterOptions extends PaginationParams {
   startDate?: string;
   endDate?: string;
   department?: string;
+  location?: string;
+  employeeStatus?: string;
+  search?: string;
   status?: string;
 }
 
@@ -136,3 +140,5 @@ export interface WorkforceDistribution {
   byStatus: StatusDistributionItem[];
   totalEmployees: number;
 }
+
+export * from './auth.types';

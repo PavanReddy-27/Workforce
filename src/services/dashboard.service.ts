@@ -1,6 +1,5 @@
 /**
- * Centralized Dashboard API Service
- * Interacts with Sprint 2 REST APIs:
+ * Dashboard API Service
  * - GET /api/dashboard/summary
  * - GET /api/dashboard/attendance
  * - GET /api/dashboard/distribution

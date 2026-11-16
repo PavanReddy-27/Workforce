@@ -20,7 +20,12 @@ export interface AssertionMethods {
   not: AssertionMethods;
 }
 
-export function expect(actual: unknown): AssertionMethods {
+export interface ExpectFunction {
+  (actual: unknown): AssertionMethods;
+  fail(message?: string): never;
+}
+
+function expectBase(actual: unknown): AssertionMethods {
   const createAssertion = (isNot = false): AssertionMethods => ({
     toBe(expected: unknown) {
       if (isNot) {
@@ -170,3 +175,10 @@ export function expect(actual: unknown): AssertionMethods {
 
   return createAssertion(false);
 }
+
+const expectImpl = expectBase as ExpectFunction;
+expectImpl.fail = function (message?: string): never {
+  assert.fail(message);
+};
+
+export const expect: ExpectFunction = expectImpl;

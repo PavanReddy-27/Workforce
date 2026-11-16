@@ -4,6 +4,8 @@ import { config } from '../config/env';
 
 export interface AppError extends Error {
   statusCode?: number;
+  status?: number;
+  type?: string;
   code?: string;
   details?: unknown;
 }
@@ -15,12 +17,17 @@ export const errorHandler = (
   next: NextFunction
 ): void => {
   void next; // Express requires 4 parameters for error handlers
-  const statusCode = err.statusCode || 500;
+  const statusCode = err.statusCode || err.status || 500;
   let code = err.code || 'INTERNAL_SERVER_ERROR';
   let message = err.message || 'An unexpected internal error occurred';
 
-  // Handle SQLite specific constraints safely
-  if (err.name === 'SqliteError') {
+  if (err.type === 'entity.too.large') {
+    code = 'PAYLOAD_TOO_LARGE';
+    message = 'Request body exceeds the allowed size';
+  } else if (err.type === 'entity.parse.failed') {
+    code = 'INVALID_JSON';
+    message = 'Request body contains invalid JSON';
+  } else if (err.name === 'SqliteError') {
     if (err.message.includes('FOREIGN KEY constraint failed')) {
       code = 'FOREIGN_KEY_VIOLATION';
       message = 'Referenced resource does not exist';

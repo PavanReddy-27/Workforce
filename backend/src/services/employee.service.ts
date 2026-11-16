@@ -31,8 +31,8 @@ export class EmployeeService {
     };
   }
 
-  public getLocations(): string[] {
-    return this.employeeRepo.findLocations();
+  public getLocations(options: { employeeId?: number; department?: string } = {}): string[] {
+    return this.employeeRepo.findLocations(options);
   }
 
   public getEmployeeById(id: number | string): EmployeeWithDepartment | null {
