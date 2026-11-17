@@ -38,6 +38,7 @@ import { ErrorState } from './components/ErrorState';
 import { PlaceholderPage } from './components/PlaceholderPage';
 import { EmployeeTable } from './features/employees';
 import { AttendancePage } from './features/attendance';
+import { EmployeeDashboard } from './features/dashboard';
 import { DepartmentsPage } from './features/departments';
 import {
   LoginPage,
@@ -137,7 +138,7 @@ const AuthenticatedAppContent: React.FC<{
   mode: 'light' | 'dark';
   onToggleMode: () => void;
 }> = ({ activeTab, mode, onToggleMode }) => {
-  const { role, hasPermission, user } = useAuth();
+  const { role, hasPermission } = useAuth();
   const navigate = useNavigate();
 
   // Navigation states
@@ -469,6 +470,19 @@ const AuthenticatedAppContent: React.FC<{
         return <SettingsPage />;
 
       default: {
+        if (role === 'employee') {
+          return (
+            <EmployeeDashboard
+              trendPoints={trendPoints}
+              timeRange={filters.timeRange}
+              onTimeRangeChange={(timeRange) => setFilters((prev) => ({ ...prev, timeRange }))}
+              loading={loading}
+              trendError={partialErrors.attendance}
+              onRefresh={refetch}
+            />
+          );
+        }
+
         let dashboardContent: React.ReactNode;
 
         if (loading && kpis.length === 0) {
@@ -616,18 +630,17 @@ const AuthenticatedAppContent: React.FC<{
       case 'payroll':
         return null;
       default:
+        if (role === 'employee') return null;
         return {
-          title: role === 'employee' ? 'My Workforce Portal' : 'Workforce Overview',
+          title: 'Workforce Overview',
           subtitle:
-            role === 'employee'
-              ? `Welcome back, ${user?.username}! Here is your attendance and schedule summary.`
-              : role === 'manager'
-                ? 'Review company-wide workforce and attendance trends.'
-                : role === 'team_lead'
-                  ? 'Review your department roster and team attendance trends.'
-                  : role === 'hr'
-                    ? 'Review company-wide workforce and attendance analytics.'
-                    : 'Monitor workforce analytics and manage platform access.',
+            role === 'manager'
+              ? 'Review company-wide workforce and attendance trends.'
+              : role === 'team_lead'
+                ? 'Review your department roster and team attendance trends.'
+                : role === 'hr'
+                  ? 'Review company-wide workforce and attendance analytics.'
+                  : 'Monitor workforce analytics and manage platform access.',
         };
     }
   };

@@ -10,6 +10,7 @@ import type {
   ApiResponse,
   PaginatedResponse,
   AttendanceRecord,
+  BackendAttendanceRecord,
   AttendanceWithEmployee,
   AttendanceFilterParams,
 } from '../types';
@@ -23,6 +24,8 @@ export interface IAttendanceService {
     record: Omit<AttendanceRecord, 'id'>,
     options?: RequestOptions
   ): Promise<ApiResponse<AttendanceRecord>>;
+  clockIn(options?: RequestOptions): Promise<ApiResponse<BackendAttendanceRecord>>;
+  clockOut(options?: RequestOptions): Promise<ApiResponse<BackendAttendanceRecord>>;
 }
 
 export class AttendanceApiService implements IAttendanceService {
@@ -86,6 +89,14 @@ export class AttendanceApiService implements IAttendanceService {
     options?: RequestOptions
   ): Promise<ApiResponse<AttendanceRecord>> {
     return httpClient.post<AttendanceRecord>(API_ENDPOINTS.ATTENDANCE.BASE, record, options);
+  }
+
+  async clockIn(options?: RequestOptions): Promise<ApiResponse<BackendAttendanceRecord>> {
+    return httpClient.post<BackendAttendanceRecord>(`${API_ENDPOINTS.ATTENDANCE.BASE}/clock-in`, {}, options);
+  }
+
+  async clockOut(options?: RequestOptions): Promise<ApiResponse<BackendAttendanceRecord>> {
+    return httpClient.post<BackendAttendanceRecord>(`${API_ENDPOINTS.ATTENDANCE.BASE}/clock-out`, {}, options);
   }
 }
 

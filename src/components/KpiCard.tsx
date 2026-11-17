@@ -1,8 +1,7 @@
 /**
  * KPI Card Component
  * Plain, Apple-inspired human-designed metric card.
- * Uses neutral monochrome tones, refined typography, elegant hierarchy,
- * and generous whitespace rather than loud multi-colored accents.
+ * Uses refined typography and the attendance status colors for KPI icons.
  */
 
 import React from 'react';
@@ -32,6 +31,14 @@ const KPI_ICON_MAP: Record<string, React.ReactNode> = {
   'Absent Today': <CancelOutlinedIcon />,
   'On Leave': <EventBusyOutlinedIcon />,
   'Attendance Rate': <TrendingUpIcon />,
+};
+
+const KPI_ICON_COLORS: Record<KpiMetric['id'], string> = {
+  total_employees: '#3B82F6',
+  present_today: '#10B981',
+  absent_today: '#EF4444',
+  on_leave: '#F59E0B',
+  attendance_rate: '#3B82F6',
 };
 
 /** Extract numeric percent 0–100 if the metric looks like "94.1%" */
@@ -110,7 +117,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({ metric, loading = false }) => 
           flexGrow: 1,
         }}
       >
-        {/* Header: title + subtle monochrome icon */}
+        {/* Header: title + attendance-colored icon */}
         <Box
           sx={{
             display: 'flex',
@@ -141,7 +148,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({ metric, loading = false }) => 
                   ? 'rgba(255, 255, 255, 0.06)'
                   : 'rgba(0, 0, 0, 0.035)',
                 border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'}`,
-                color: theme.palette.text.secondary,
+                color: KPI_ICON_COLORS[metric.id],
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -170,7 +177,7 @@ export const KpiCard: React.FC<KpiCardProps> = ({ metric, loading = false }) => 
           {metric.value}
         </Typography>
 
-        {/* Apple-style thin monochrome progress bar (for Attendance Rate) */}
+        {/* Thin progress bar for Attendance Rate */}
         {progressValue !== null && (
           <Box sx={{ mb: 1.25 }}>
             <Box

@@ -65,6 +65,8 @@ export const Topbar: React.FC<TopbarProps> = ({
 
   const canExport = hasPermission('export:data');
   const canCreateEmployee = hasPermission('employees:create');
+  const canSearchEmployees =
+    hasPermission('employees:read_all') || hasPermission('employees:read_dept');
 
   const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -122,7 +124,7 @@ export const Topbar: React.FC<TopbarProps> = ({
               noWrap
               sx={{ fontWeight: 600, fontSize: '0.9375rem', letterSpacing: '-0.01em' }}
             >
-              Workforce Analytics
+              {userRole === 'employee' ? 'My Workforce' : 'Workforce Analytics'}
             </Typography>
             <Chip
               label={userRole.toUpperCase()}
@@ -134,39 +136,41 @@ export const Topbar: React.FC<TopbarProps> = ({
           </Box>
 
           {/* Search bar */}
-          <Box
-            component="form"
-            onSubmit={(e: React.SubmitEvent) => e.preventDefault()}
-            sx={{
-              display: { xs: 'none', md: 'flex' },
-              alignItems: 'center',
-              maxWidth: 240,
-              width: '100%',
-              px: 1.25,
-              py: 0.35,
-              borderRadius: '6px',
-              backgroundColor: isDark ? alpha('#FFFFFF', 0.05) : alpha('#0F172A', 0.04),
-              border: `1px solid transparent`,
-              transition: 'border-color 0.15s ease',
-              '&:focus-within': {
-                borderColor: theme.palette.primary.main,
-              },
-            }}
-          >
-            <SearchIcon sx={{ color: theme.palette.text.secondary, mr: 0.75, fontSize: 17 }} />
-            <InputBase
-              placeholder="Search employee or role..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              inputProps={{ 'aria-label': 'Search employee or role' }}
-              sx={{ fontSize: '0.8125rem', width: '100%', color: theme.palette.text.primary }}
-            />
-            {searchQuery && (
-              <IconButton size="small" onClick={() => onSearchChange('')} sx={{ p: 0.25 }} aria-label="Clear search">
-                <ClearIcon sx={{ fontSize: 13 }} />
-              </IconButton>
-            )}
-          </Box>
+          {canSearchEmployees && (
+            <Box
+              component="form"
+              onSubmit={(e: React.SubmitEvent) => e.preventDefault()}
+              sx={{
+                display: { xs: 'none', md: 'flex' },
+                alignItems: 'center',
+                maxWidth: 240,
+                width: '100%',
+                px: 1.25,
+                py: 0.35,
+                borderRadius: '6px',
+                backgroundColor: isDark ? alpha('#FFFFFF', 0.05) : alpha('#0F172A', 0.04),
+                border: `1px solid transparent`,
+                transition: 'border-color 0.15s ease',
+                '&:focus-within': {
+                  borderColor: theme.palette.primary.main,
+                },
+              }}
+            >
+              <SearchIcon sx={{ color: theme.palette.text.secondary, mr: 0.75, fontSize: 17 }} />
+              <InputBase
+                placeholder="Search employee or role..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                inputProps={{ 'aria-label': 'Search employee or role' }}
+                sx={{ fontSize: '0.8125rem', width: '100%', color: theme.palette.text.primary }}
+              />
+              {searchQuery && (
+                <IconButton size="small" onClick={() => onSearchChange('')} sx={{ p: 0.25 }} aria-label="Clear search">
+                  <ClearIcon sx={{ fontSize: 13 }} />
+                </IconButton>
+              )}
+            </Box>
+          )}
 
           {/* Actions */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>

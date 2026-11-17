@@ -7,6 +7,8 @@ import { requireAnyPermission } from '../middleware/auth.middleware';
 const router = Router();
 const controller = new AttendanceController();
 
+router.post('/clock-in', requireAnyPermission('attendance:mark_own', 'attendance:manage'), controller.clockIn);
+router.post('/clock-out', requireAnyPermission('attendance:mark_own', 'attendance:manage'), controller.clockOut);
 router.get(
   '/',
   requireAnyPermission('attendance:read_all', 'attendance:read_dept', 'attendance:read_own'),

@@ -1,5 +1,6 @@
 import { AttendanceRepository } from '../repositories/attendance.repository';
 import type {
+  AttendanceRecord,
   AttendanceWithEmployee,
   AttendanceFilterOptions,
   PaginatedResult,
@@ -39,5 +40,21 @@ export class AttendanceService {
       },
       summary,
     };
+  }
+
+  public clockIn(
+    employeeId: number,
+    date: string,
+    timestamp: string
+  ): AttendanceRecord | undefined {
+    return this.attendanceRepo.clockIn(employeeId, date, timestamp);
+  }
+
+  public clockOut(
+    employeeId: number,
+    date: string,
+    timestamp: string
+  ): AttendanceRecord | undefined {
+    return this.attendanceRepo.clockOut(employeeId, date, timestamp);
   }
 }

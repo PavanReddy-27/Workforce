@@ -99,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'departments',
       label: 'Departments',
       icon: <DomainOutlinedIcon />,
+      allowedRoles: ['admin', 'hr', 'manager', 'team_lead'],
       requiredPermissions: ['departments:read'],
     },
     {
@@ -146,7 +147,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     },
     {
       id: 'settings',
-      label: 'Platform Settings',
+      label: userRole === 'employee' ? 'Account & Security' : 'Platform Settings',
       icon: <SettingsOutlinedIcon />,
       requiredPermissions: ['settings:manage'],
     },

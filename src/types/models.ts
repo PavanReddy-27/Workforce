@@ -62,8 +62,7 @@ export interface ActivityItem {
   hireDate: string;
 }
 
-/** Backend-shaped attendance record with embedded employee data */
-export interface AttendanceWithEmployee {
+export interface BackendAttendanceRecord {
   id: number;
   employee_id: number;
   attendance_date: string;
@@ -72,6 +71,10 @@ export interface AttendanceWithEmployee {
   check_out_time: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Backend-shaped attendance record with embedded employee data */
+export interface AttendanceWithEmployee extends BackendAttendanceRecord {
   employee_code: string;
   first_name: string;
   last_name: string;

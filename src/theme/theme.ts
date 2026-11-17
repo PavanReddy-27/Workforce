@@ -170,7 +170,7 @@ export const createAppTheme = (mode: PaletteMode): Theme => {
       MuiCard: {
         styleOverrides: {
           root: {
-            borderRadius: 10,
+            borderRadius: tokens.radius.lg,
             border: `1px solid ${isDark ? 'rgba(148, 163, 184, 0.1)' : palette.slate[200]}`,
             boxShadow: isDark
               ? '0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25)'
@@ -185,12 +185,13 @@ export const createAppTheme = (mode: PaletteMode): Theme => {
       MuiButton: {
         styleOverrides: {
           root: {
-            borderRadius: 7,
+            borderRadius: tokens.radius.md,
             padding: '6px 14px',
             boxShadow: 'none',
             '&:hover': { boxShadow: 'none' },
             '&:active': { transform: 'scale(0.98)' },
           },
+
           contained: {
             '&:hover': {
               boxShadow: isDark
@@ -246,7 +247,7 @@ export const createAppTheme = (mode: PaletteMode): Theme => {
       MuiOutlinedInput: {
         styleOverrides: {
           root: {
-            borderRadius: 7,
+            borderRadius: tokens.radius.md,
             '& .MuiOutlinedInput-notchedOutline': {
               borderColor: isDark ? 'rgba(148, 163, 184, 0.2)' : palette.slate[200],
             },
@@ -260,7 +261,7 @@ export const createAppTheme = (mode: PaletteMode): Theme => {
       /* ─── Select ────────────────────────────────── */
       MuiSelect: {
         styleOverrides: {
-          root: { borderRadius: 7 },
+          root: { borderRadius: tokens.radius.md },
         },
       },
 

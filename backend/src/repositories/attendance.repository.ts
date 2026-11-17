@@ -218,6 +218,47 @@ export class AttendanceRepository {
     return this.db.prepare(sql).get(employeeId, date) as AttendanceRecord | undefined;
   }
 
+  public clockIn(employeeId: number, date: string, timestamp: string): AttendanceRecord | undefined {
+    return this.db.transaction(() => {
+      const existing = this.findByEmployeeAndDate(employeeId, date);
+      if (existing) {
+        if (existing.check_in_time || existing.status === 'On Leave') return undefined;
+        const result = this.db
+          .prepare(`
+            UPDATE attendance
+            SET status = 'Present', check_in_time = ?, updated_at = ?
+            WHERE id = ? AND check_in_time IS NULL AND status != 'On Leave'
+          `)
+          .run(timestamp, timestamp, existing.id);
+        if (result.changes !== 1) return undefined;
+      } else {
+        const result = this.db
+          .prepare(`
+            INSERT INTO attendance (employee_id, attendance_date, status, check_in_time, created_at, updated_at)
+            VALUES (?, ?, 'Present', ?, ?, ?)
+            ON CONFLICT (employee_id, attendance_date) DO NOTHING
+          `)
+          .run(employeeId, date, timestamp, timestamp, timestamp);
+        if (result.changes !== 1) return undefined;
+      }
+
+      return this.findByEmployeeAndDate(employeeId, date);
+    })();
+  }
+
+  public clockOut(employeeId: number, date: string, timestamp: string): AttendanceRecord | undefined {
+    const result = this.db
+      .prepare(`
+        UPDATE attendance
+        SET check_out_time = ?, updated_at = ?
+        WHERE employee_id = ? AND attendance_date = ?
+          AND check_in_time IS NOT NULL AND check_out_time IS NULL
+      `)
+      .run(timestamp, timestamp, employeeId, date);
+    if (result.changes !== 1) return undefined;
+    return this.findByEmployeeAndDate(employeeId, date);
+  }
+
   public count(): number {
     const stmt = this.db.prepare('SELECT COUNT(*) as c FROM attendance');
     return (stmt.get() as { c: number }).c;

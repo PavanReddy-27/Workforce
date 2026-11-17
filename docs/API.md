@@ -66,7 +66,7 @@ navigation item in the frontend does not grant or deny API access.
 | HR | All employees | All attendance | Create and update | Exports |
 | Manager | All departments | All departments | Read only | Company-wide dashboard |
 | Team Lead | Linked department | Linked department | Read only | Department-scoped dashboard |
-| Employee | Own linked profile | Own attendance | Read own profile | Personal dashboard and security settings |
+| Employee | Own linked profile | Read and clock own attendance | Read own profile | Personal dashboard and security settings |
 
 Manager employee, attendance, department-distribution, and dashboard access
 spans all departments. Team Leads remain department-scoped because the current
@@ -555,6 +555,21 @@ their own records.
   "timestamp": "2026-10-30T12:00:00.000Z"
 }
 ```
+
+### `POST /api/attendance/clock-in`
+Creates or updates the signed-in employee's UTC-day attendance record as
+`Present` and records the server timestamp. The employee ID and timestamp are
+derived by the server; request fields cannot select another employee or date.
+Requires `attendance:mark_own` or `attendance:manage`.
+
+### `POST /api/attendance/clock-out`
+Records the server timestamp for the signed-in employee's open attendance
+record for the current UTC day. The employee must have clocked in first.
+Requires `attendance:mark_own` or `attendance:manage`.
+
+Both actions return the updated attendance record. Duplicate clock-ins,
+clock-outs without a clock-in, and clock-outs after an existing clock-out
+return `409 ATTENDANCE_CONFLICT`.
 
 ---
 

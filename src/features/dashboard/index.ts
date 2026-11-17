@@ -5,3 +5,4 @@
 export { DashboardFilters } from '../../components/DashboardFilters';
 export { KpiCard } from '../../components/KpiCard';
 export { RecentActivity } from '../../components/RecentActivity';
+export { EmployeeDashboard } from './EmployeeDashboard';
