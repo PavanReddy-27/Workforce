@@ -190,7 +190,7 @@ export const initializeDatabase = (db: Database.Database): void => {
   const roleDescriptions: Record<UserRole, string> = {
     admin: 'Full administrative access',
     hr: 'Company-wide employee and attendance management',
-    manager: 'Department-level workforce access',
+    manager: 'Company-wide workforce data access',
     team_lead: 'Department-level team oversight',
     employee: 'Personal workforce profile and attendance access',
   };

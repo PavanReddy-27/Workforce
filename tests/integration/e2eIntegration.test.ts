@@ -154,6 +154,22 @@ describe('Live End-to-End Frontend-Backend Integration Tests', () => {
     expect(attRes.pagination.totalRecords).toBeGreaterThan(700);
   });
 
+  it('should keep employee and attendance records within the selected department', async () => {
+    const departmentName = 'Product & Design';
+    const [employees, attendance] = await Promise.all([
+      employeeService.getEmployees({ department: departmentName, limit: 100 }),
+      attendanceService.getAttendance({ department: departmentName, limit: 100 }),
+    ]);
+
+    expect(employees.success).toBe(true);
+    expect(employees.data.length).toBeGreaterThan(0);
+    expect(employees.data.every((employee) => employee.department_name === departmentName)).toBe(true);
+    expect(attendance.success).toBe(true);
+    expect(attendance.data.length).toBeGreaterThan(0);
+    expect(attendance.data.every((record) => record.department_name === departmentName)).toBe(true);
+    expect(attendance.data.some((record) => record.department_name === 'Engineering')).toBe(false);
+  });
+
   it('should create a new employee via POST /api/employees', async () => {
     const uniqueSuffix = Date.now().toString().slice(-6);
     const newEmp = await employeeService.createEmployee({
@@ -175,6 +191,76 @@ describe('Live End-to-End Frontend-Backend Integration Tests', () => {
       if (newEmp?.data?.id) {
         await employeeService.deleteEmployee(newEmp.data.id);
       }
+    }
+  });
+
+  it('should reflect employee creation and deletion in directory, department, dashboard, and attendance data', async () => {
+    const filters = {
+      department: 'All Departments',
+      location: 'All Locations',
+      timeRange: '30d',
+      employmentType: 'All Types',
+      searchQuery: '',
+    } as const;
+    const beforeSummary = await dashboardService.getSummary(filters);
+    const beforeDistribution = await dashboardService.getWorkforceDistribution();
+    expect(beforeSummary.success).toBe(true);
+    expect(beforeDistribution.success).toBe(true);
+
+    const suffix = Date.now().toString();
+    const created = await employeeService.createEmployee({
+      first_name: 'Sync',
+      last_name: `Check${suffix}`,
+      email: `sync.check${suffix}@stackly.internal`,
+      job_title: 'Data Consistency Test',
+      department: 'Engineering',
+      location: 'Sync Verification Office',
+      employment_status: 'Active',
+    });
+
+    let deleted = false;
+    try {
+      const [directory, summary, distribution, attendance] = await Promise.all([
+        employeeService.getEmployees({ search: `sync.check${suffix}` }),
+        dashboardService.getSummary(filters),
+        dashboardService.getWorkforceDistribution(),
+        attendanceService.getAttendanceRecords({ employeeId: created.data.id }),
+      ]);
+      expect(directory.data.length).toBe(1);
+      expect(summary.data.totalEmployees).toBe(beforeSummary.data.totalEmployees + 1);
+      expect(distribution.data.totalEmployees).toBe(beforeDistribution.data.totalEmployees + 1);
+      expect(
+        distribution.data.byDepartment.find((department) => department.departmentName === 'Engineering')?.headcount
+      ).toBe(
+        beforeDistribution.data.byDepartment.find((department) => department.departmentName === 'Engineering')!.headcount + 1
+      );
+      expect(attendance.data.length).toBe(1);
+
+      const deletion = await employeeService.deleteEmployee(created.data.id);
+      expect(deletion.success).toBe(true);
+      deleted = true;
+      const [directoryAfterDelete, summaryAfterDelete, distributionAfterDelete, attendanceAfterDelete] =
+        await Promise.all([
+          employeeService.getEmployees({ search: `sync.check${suffix}` }),
+          dashboardService.getSummary(filters),
+          dashboardService.getWorkforceDistribution(),
+          attendanceService.getAttendanceRecords({ employeeId: created.data.id }),
+        ]);
+      expect(directoryAfterDelete.data.length).toBe(0);
+      expect(summaryAfterDelete.data.totalEmployees).toBe(beforeSummary.data.totalEmployees);
+      expect(distributionAfterDelete.data.totalEmployees).toBe(beforeDistribution.data.totalEmployees);
+      expect(attendanceAfterDelete.data.length).toBe(0);
+    } catch (error) {
+      if (!deleted) {
+        const cleanup = await employeeService.deleteEmployee(created.data.id);
+        if (!cleanup.success) {
+          throw new Error(
+            cleanup.message || 'Failed to clean up integration-test employee.',
+            { cause: error }
+          );
+        }
+      }
+      throw error;
     }
   });
 

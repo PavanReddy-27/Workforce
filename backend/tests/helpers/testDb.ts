@@ -197,6 +197,18 @@ export const createTestApp = (db: Database.Database): Express => {
     validateRequest({ query: getAttendanceQuerySchema }),
     attCtrl.getAttendance
   );
+  app.post(
+    '/api/attendance/clock-in',
+    dataActor,
+    requireAnyPermission('attendance:mark_own', 'attendance:manage'),
+    attCtrl.clockIn
+  );
+  app.post(
+    '/api/attendance/clock-out',
+    dataActor,
+    requireAnyPermission('attendance:mark_own', 'attendance:manage'),
+    attCtrl.clockOut
+  );
 
   // Dashboard
   app.get(

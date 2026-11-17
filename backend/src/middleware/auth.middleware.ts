@@ -175,7 +175,7 @@ export const requireAnyPermission = (...requiredPermissions: Permission[]) => {
 export const getUserDataScope = (
   user: SafeUser
 ): { employeeId?: number; departmentId?: number } | null => {
-  if (user.role === 'admin' || user.role === 'hr') return {};
+  if (user.role === 'admin' || user.role === 'hr' || user.role === 'manager') return {};
 
   const employeeId = user.employee_id;
   const departmentId = user.employee_details?.department_id;

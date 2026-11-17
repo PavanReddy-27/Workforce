@@ -50,6 +50,7 @@ import type { AttendanceWithEmployee, BackendEmployee, FilterState, KpiMetric } 
 import { EmployeeDetailDialog } from '../employees';
 import { exportToCsv, formatAttendanceDate, formatAttendanceTime } from '../../utils';
 import { useAuth } from '../../context';
+import { AttendanceClockCard } from './AttendanceClockCard';
 
 const STATUS_OPTIONS = ['All Statuses', 'Present', 'Absent', 'On Leave'];
 
@@ -59,6 +60,8 @@ interface AttendancePageProps {
   dashboardLoading: boolean;
   onDepartmentChange: (department: string) => void;
   onClearDashboardFilters: () => void;
+  dataRefreshTrigger: number;
+  onDataChanged: () => void;
 }
 
 function getDefaultDateRange() {
@@ -77,11 +80,17 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
   dashboardLoading,
   onDepartmentChange,
   onClearDashboardFilters,
+  dataRefreshTrigger,
+  onDataChanged,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const canExport = hasPermission('export:data');
+  const isOwnOnly =
+    hasPermission('attendance:read_own') &&
+    !hasPermission('attendance:read_all') &&
+    !hasPermission('attendance:read_dept');
 
   const defaults = getDefaultDateRange();
 
@@ -113,6 +122,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
   }, [dashboardFilters.department]);
 
   useEffect(() => {
+    if (isOwnOnly) return;
     let active = true;
     departmentService
       .getDepartments()
@@ -135,7 +145,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
     return () => {
       active = false;
     };
-  }, []);
+  }, [dataRefreshTrigger, isOwnOnly]);
 
   const fetchRecords = useCallback(async () => {
     if (abortRef.current) abortRef.current.abort();
@@ -198,7 +208,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
 
   useEffect(() => {
     fetchRecords();
-  }, [fetchRecords, refreshTrigger]);
+  }, [fetchRecords, refreshTrigger, dataRefreshTrigger]);
 
   const handleSort = (field: string) => {
     const isAsc = sortBy === field && sortOrder === 'asc';
@@ -304,10 +314,12 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
           variant="h5"
           sx={{ fontWeight: 700, fontSize: { xs: '1.25rem', sm: '1.5rem' }, letterSpacing: '-0.02em' }}
         >
-          Attendance Management
+          {isOwnOnly ? 'My Attendance' : 'Attendance Management'}
         </Typography>
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>
-          Attendance snapshot matches Overview; use the date range below to filter attendance records.
+          {isOwnOnly
+            ? 'Clock in and out, then review your attendance history.'
+            : 'Attendance snapshot matches Overview and refreshes after changes and every 15 seconds.'}
         </Typography>
       </Box>
 
@@ -316,8 +328,14 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
           Unable to load department filters: {departmentOptionsError}
         </Alert>
       )}
+      {isOwnOnly && user?.employee_id && (
+        <Box sx={{ mb: 2.5 }}>
+          <AttendanceClockCard onAttendanceChanged={onDataChanged} />
+        </Box>
+      )}
+
       {/* Overview KPI snapshot */}
-      <Box
+      {!isOwnOnly && <Box
         sx={{
           display: 'grid',
           gridTemplateColumns: {
@@ -355,7 +373,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
             </Card>
           </Box>
         ))}
-      </Box>
+      </Box>}
 
       {/* Filter Bar */}
       <Card sx={{ mb: 2, borderRadius: '8px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0'}` }}>
@@ -385,7 +403,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
                 {STATUS_OPTIONS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
               </Select>
             </FormControl>
-            <FormControl size="small" sx={{ width: 180 }}>
+            {!isOwnOnly && <FormControl size="small" sx={{ width: 180 }}>
               <InputLabel>Department</InputLabel>
               <Select
                 value={dashboardFilters.department}
@@ -397,7 +415,7 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
               >
                 {departmentOptions.map((d) => <MenuItem key={d} value={d}>{d}</MenuItem>)}
               </Select>
-            </FormControl>
+            </FormControl>}
             <Box sx={{ display: 'flex', gap: 1, ml: 'auto' }}>
               {canExport && (
                 <Tooltip title="Export Attendance CSV">
@@ -588,8 +606,8 @@ export const AttendancePage: React.FC<AttendancePageProps> = ({
         open={detailOpen}
         employee={selectedEmployee}
         onClose={() => setDetailOpen(false)}
-        onUpdated={() => fetchRecords()}
-        onDeleted={() => fetchRecords()}
+        onUpdated={onDataChanged}
+        onDeleted={onDataChanged}
       />
     </Box>
   );

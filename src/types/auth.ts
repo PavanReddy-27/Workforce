@@ -11,6 +11,7 @@ export type Permission =
   | 'attendance:read_all'
   | 'attendance:read_dept'
   | 'attendance:read_own'
+  | 'attendance:mark_own'
   | 'attendance:manage'
   | 'departments:read'
   | 'departments:manage'

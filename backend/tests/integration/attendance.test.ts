@@ -103,4 +103,65 @@ describe('Attendance API Integration Tests', () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
+
+  it('allows an employee to clock in and out only for their own daily record', async () => {
+    const login = await request(app).post('/api/auth/login').send({
+      email: 'employee@workforce.com',
+      password: 'Employee@123456',
+    });
+    expect(login.status).toBe(200);
+    const { accessToken, user } = login.body.data as {
+      accessToken: string;
+      user: { employee_id: number };
+    };
+    const today = new Date().toISOString().slice(0, 10);
+    db.prepare('DELETE FROM attendance WHERE employee_id = ? AND attendance_date = ?')
+      .run(user.employee_id, today);
+
+    const clockIn = await request(app)
+      .post('/api/attendance/clock-in')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ employeeId: user.employee_id + 1 });
+
+    expect(clockIn.status).toBe(201);
+    expect(clockIn.body.data.employee_id).toBe(user.employee_id);
+    expect(clockIn.body.data.status).toBe('Present');
+    expect(clockIn.body.data.check_in_time).toBeDefined();
+
+    const duplicateClockIn = await request(app)
+      .post('/api/attendance/clock-in')
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(duplicateClockIn.status).toBe(409);
+
+    const clockOut = await request(app)
+      .post('/api/attendance/clock-out')
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(clockOut.status).toBe(200);
+    expect(clockOut.body.data.employee_id).toBe(user.employee_id);
+    expect(clockOut.body.data.check_out_time).toBeDefined();
+
+    const duplicateClockOut = await request(app)
+      .post('/api/attendance/clock-out')
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(duplicateClockOut.status).toBe(409);
+  });
+
+  it('requires an employee clock-in before clock-out', async () => {
+    const login = await request(app).post('/api/auth/login').send({
+      email: 'employee@workforce.com',
+      password: 'Employee@123456',
+    });
+    const accessToken = login.body.data.accessToken as string;
+    const user = login.body.data.user as { employee_id: number };
+    const today = new Date().toISOString().slice(0, 10);
+    db.prepare('DELETE FROM attendance WHERE employee_id = ? AND attendance_date = ?')
+      .run(user.employee_id, today);
+
+    const response = await request(app)
+      .post('/api/attendance/clock-out')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('ATTENDANCE_CONFLICT');
+  });
 });

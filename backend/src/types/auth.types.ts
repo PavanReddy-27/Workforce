@@ -11,6 +11,7 @@ export type Permission =
   | 'attendance:read_all'
   | 'attendance:read_dept'
   | 'attendance:read_own'
+  | 'attendance:mark_own'
   | 'attendance:manage'
   | 'departments:read'
   | 'departments:manage'
@@ -31,6 +32,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'attendance:read_all',
     'attendance:read_dept',
     'attendance:read_own',
+    'attendance:mark_own',
     'attendance:manage',
     'departments:read',
     'departments:manage',
@@ -49,6 +51,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'attendance:read_all',
     'attendance:read_dept',
     'attendance:read_own',
+    'attendance:mark_own',
     'attendance:manage',
     'departments:read',
     'export:data',
@@ -56,10 +59,13 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   ],
   manager: [
     'dashboard:view',
+    'employees:read_all',
     'employees:read_dept',
     'employees:read_own',
+    'attendance:read_all',
     'attendance:read_dept',
     'attendance:read_own',
+    'attendance:mark_own',
     'departments:read',
     'settings:manage',
   ],
@@ -69,6 +75,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'employees:read_own',
     'attendance:read_dept',
     'attendance:read_own',
+    'attendance:mark_own',
     'departments:read',
     'settings:manage',
   ],
@@ -76,6 +83,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'dashboard:view',
     'employees:read_own',
     'attendance:read_own',
+    'attendance:mark_own',
     'departments:read',
     'settings:manage',
   ],
