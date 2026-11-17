@@ -126,6 +126,8 @@ const ProtectedWorkspaceRoute: React.FC<{
         requiredPermission={route.permissions?.[0]}
         requiredRole={route.roles?.join(' or ')}
         onGoHome={() => navigate('/')}
+        mode={mode}
+        onToggleMode={onToggleMode}
       />
     );
   }
@@ -346,6 +348,8 @@ const AuthenticatedAppContent: React.FC<{
             <AccessDeniedPage
               requiredPermission="employees:read_all"
               onGoHome={() => navigate('/')}
+              mode={mode}
+              onToggleMode={onToggleMode}
             />
           );
         }
@@ -366,6 +370,8 @@ const AuthenticatedAppContent: React.FC<{
             <AccessDeniedPage
               requiredPermission="attendance:read_own"
               onGoHome={() => navigate('/')}
+              mode={mode}
+              onToggleMode={onToggleMode}
             />
           );
         }
@@ -389,6 +395,8 @@ const AuthenticatedAppContent: React.FC<{
             <AccessDeniedPage
               requiredPermission="departments:read"
               onGoHome={() => navigate('/')}
+              mode={mode}
+              onToggleMode={onToggleMode}
             />
           );
         }
@@ -409,6 +417,8 @@ const AuthenticatedAppContent: React.FC<{
             <AccessDeniedPage
               requiredPermission="users:manage"
               onGoHome={() => navigate('/')}
+              mode={mode}
+              onToggleMode={onToggleMode}
             />
           );
         }
@@ -420,6 +430,8 @@ const AuthenticatedAppContent: React.FC<{
             <AccessDeniedPage
               requiredPermission="audit:view"
               onGoHome={() => navigate('/')}
+              mode={mode}
+              onToggleMode={onToggleMode}
             />
           );
         }
@@ -431,6 +443,8 @@ const AuthenticatedAppContent: React.FC<{
             <AccessDeniedPage
               requiredPermission="users:manage"
               onGoHome={() => navigate('/')}
+              mode={mode}
+              onToggleMode={onToggleMode}
             />
           );
         }
@@ -864,11 +878,17 @@ const AppContent: React.FC<{
 
   return (
     <Routes>
-      <Route path="/login" element={<LoginRoute><LoginPage /></LoginRoute>} />
+      <Route path="/login" element={<LoginRoute><LoginPage mode={mode} onToggleMode={onToggleMode} /></LoginRoute>} />
       <Route element={<RequireAuthentication />}>
         <Route
           path="/access-denied"
-          element={<AccessDeniedPage onGoHome={() => navigate('/')} />}
+          element={
+            <AccessDeniedPage
+              onGoHome={() => navigate('/')}
+              mode={mode}
+              onToggleMode={onToggleMode}
+            />
+          }
         />
         <Route path="*" element={<ProtectedWorkspaceRoute mode={mode} onToggleMode={onToggleMode} />} />
       </Route>

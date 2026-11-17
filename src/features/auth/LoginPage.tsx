@@ -8,6 +8,8 @@ import {
   IconButton,
   InputBase,
   Tooltip,
+  alpha,
+  useTheme,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
@@ -21,48 +23,51 @@ import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
+import { ThemeModeToggleButton } from '../../components/ThemeModeToggleButton';
+import type { Theme } from '@mui/material/styles';
 import { useAuth } from '../../context';
 import { authService } from '../../services/auth.service';
 import type { DemoAccountFromSql } from '../../types';
 import { Vault3DIllustration } from './Vault3DIllustration';
 import { EmployeeLoginDialog } from './EmployeeLoginDialog';
 
-const getRoleConfig = (role: string) => {
+const getRoleConfig = (role: string, theme: Theme) => {
   switch (role) {
     case 'admin':
       return {
         icon: <AdminPanelSettingsIcon sx={{ fontSize: 16 }} />,
-        badgeColor: '#ef4444',
-        badgeBg: '#fef2f2',
+        badgeColor: theme.palette.error.main,
       };
     case 'hr':
       return {
         icon: <BadgeOutlinedIcon sx={{ fontSize: 16 }} />,
-        badgeColor: '#2563eb',
-        badgeBg: '#eff6ff',
+        badgeColor: theme.palette.primary.main,
       };
     case 'manager':
       return {
         icon: <SupervisorAccountIcon sx={{ fontSize: 16 }} />,
-        badgeColor: '#f59e0b',
-        badgeBg: '#fffbeb',
+        badgeColor: theme.palette.warning.main,
       };
     case 'team_lead':
       return {
         icon: <SupervisorAccountIcon sx={{ fontSize: 16 }} />,
-        badgeColor: '#06b6d4',
-        badgeBg: '#ecfeff',
+        badgeColor: theme.palette.info.main,
       };
     default:
       return {
         icon: <PersonOutlinedIcon sx={{ fontSize: 16 }} />,
-        badgeColor: '#64748b',
-        badgeBg: '#f8fafc',
+        badgeColor: theme.palette.text.secondary,
       };
   }
 };
 
-export const LoginPage: React.FC = () => {
+interface LoginPageProps {
+  mode: 'light' | 'dark';
+  onToggleMode: () => void;
+}
+
+export const LoginPage: React.FC<LoginPageProps> = ({ mode, onToggleMode }) => {
+  const theme = useTheme();
   const { login, verifyMfa } = useAuth();
   const demoLoginEnabled = import.meta.env.DEV;
 
@@ -178,7 +183,7 @@ export const LoginPage: React.FC = () => {
         width: '100vw',
         display: 'flex',
         flexDirection: { xs: 'column', md: 'row' },
-        backgroundColor: '#ffffff',
+        backgroundColor: 'background.default',
         overflow: 'hidden',
       }}
     >
@@ -192,13 +197,13 @@ export const LoginPage: React.FC = () => {
           justifyContent: 'space-between',
           px: { xs: 3, sm: 6, md: 7, lg: 9 },
           py: { xs: 4, sm: 5 },
-          backgroundColor: '#ffffff',
+          backgroundColor: 'background.default',
           boxSizing: 'border-box',
           overflowY: 'auto',
         }}
       >
         {/* Top Brand Header: Stackly Logo (matching Sidebar) */}
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
           <Box
             component="img"
             src="/stackly-logo.png"
@@ -210,6 +215,7 @@ export const LoginPage: React.FC = () => {
               objectFit: 'contain',
             }}
           />
+          <ThemeModeToggleButton mode={mode} onToggle={onToggleMode} />
         </Box>
 
         {/* Center Main Card Content */}
@@ -228,7 +234,7 @@ export const LoginPage: React.FC = () => {
               sx={{
                 fontWeight: 700,
                 fontSize: { xs: '1.75rem', sm: '2rem' },
-                color: '#0f172a',
+                color: 'text.primary',
                 letterSpacing: '-0.03em',
               }}
             >
@@ -236,7 +242,7 @@ export const LoginPage: React.FC = () => {
             </Typography>
             <Typography
               sx={{
-                color: '#94a3b8',
+                color: 'text.secondary',
                 fontSize: '0.875rem',
                 mt: 0.75,
                 fontWeight: 400,
@@ -272,13 +278,13 @@ export const LoginPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   border: '1.5px solid',
-                  borderColor: emailFocused ? '#2563eb' : '#e2e8f0',
+                  borderColor: emailFocused ? 'primary.main' : 'divider',
                   borderRadius: '14px',
                   px: 2,
                   py: 1.1,
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'background.paper',
                   boxShadow: emailFocused
-                    ? '0 0 0 3px rgba(37, 99, 235, 0.12)'
+                    ? `0 0 0 3px ${alpha(theme.palette.primary.main, 0.16)}`
                     : 'none',
                   transition: 'all 0.2s ease',
                 }}
@@ -289,7 +295,7 @@ export const LoginPage: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#94a3b8',
+                    color: 'text.secondary',
                     mr: 1.5,
                   }}
                 >
@@ -302,7 +308,7 @@ export const LoginPage: React.FC = () => {
                     sx={{
                       fontSize: '0.68rem',
                       fontWeight: 600,
-                      color: '#94a3b8',
+                      color: 'text.secondary',
                       textTransform: 'capitalize',
                       lineHeight: 1,
                     }}
@@ -325,7 +331,7 @@ export const LoginPage: React.FC = () => {
                     sx={{
                       fontSize: '0.92rem',
                       fontWeight: 600,
-                      color: '#0f172a',
+                      color: 'text.primary',
                       mt: 0.2,
                       p: 0,
                     }}
@@ -337,7 +343,7 @@ export const LoginPage: React.FC = () => {
                   <CheckCircleRoundedIcon
                     sx={{
                       fontSize: 20,
-                      color: '#10b981',
+                      color: 'success.main',
                       ml: 1,
                     }}
                   />
@@ -351,13 +357,13 @@ export const LoginPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   border: '1.5px solid',
-                  borderColor: passwordFocused ? '#2563eb' : '#e2e8f0',
+                  borderColor: passwordFocused ? 'primary.main' : 'divider',
                   borderRadius: '14px',
                   px: 2,
                   py: 1.1,
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'background.paper',
                   boxShadow: passwordFocused
-                    ? '0 0 0 3px rgba(37, 99, 235, 0.12)'
+                    ? `0 0 0 3px ${alpha(theme.palette.primary.main, 0.16)}`
                     : 'none',
                   transition: 'all 0.2s ease',
                 }}
@@ -368,7 +374,7 @@ export const LoginPage: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#94a3b8',
+                    color: 'text.secondary',
                     mr: 1.5,
                   }}
                 >
@@ -381,7 +387,7 @@ export const LoginPage: React.FC = () => {
                     sx={{
                       fontSize: '0.68rem',
                       fontWeight: 600,
-                      color: '#94a3b8',
+                      color: 'text.secondary',
                       textTransform: 'capitalize',
                       lineHeight: 1,
                     }}
@@ -404,7 +410,7 @@ export const LoginPage: React.FC = () => {
                     sx={{
                       fontSize: '0.92rem',
                       fontWeight: 600,
-                      color: '#0f172a',
+                      color: 'text.primary',
                       mt: 0.2,
                       p: 0,
                     }}
@@ -416,7 +422,7 @@ export const LoginPage: React.FC = () => {
                   size="small"
                   onClick={() => setShowPassword(!showPassword)}
                   edge="end"
-                  sx={{ color: '#94a3b8' }}
+                  sx={{ color: 'text.secondary' }}
                 >
                   {showPassword ? <VisibilityOff sx={{ fontSize: 19 }} /> : <Visibility sx={{ fontSize: 19 }} />}
                 </IconButton>
@@ -430,17 +436,17 @@ export const LoginPage: React.FC = () => {
                 disabled={loading}
                 sx={{
                   py: 1.4,
-                  backgroundColor: '#0066ff',
-                  color: '#ffffff',
+                  backgroundColor: 'primary.main',
+                  color: 'primary.contrastText',
                   fontSize: '0.95rem',
                   fontWeight: 600,
                   borderRadius: '14px',
                   textTransform: 'none',
-                  boxShadow: '0 8px 20px rgba(0, 102, 255, 0.32)',
+                  boxShadow: `0 8px 20px ${alpha(theme.palette.primary.main, 0.28)}`,
                   transition: 'all 0.2s ease',
                   '&:hover': {
-                    backgroundColor: '#0052cc',
-                    boxShadow: '0 10px 24px rgba(0, 102, 255, 0.42)',
+                    backgroundColor: 'primary.dark',
+                    boxShadow: `0 10px 24px ${alpha(theme.palette.primary.main, 0.36)}`,
                   },
                 }}
               >
@@ -458,12 +464,12 @@ export const LoginPage: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   border: '1.5px solid',
-                  borderColor: mfaFocused ? '#2563eb' : '#e2e8f0',
+                  borderColor: mfaFocused ? 'primary.main' : 'divider',
                   borderRadius: '14px',
                   px: 2,
                   py: 1.2,
-                  backgroundColor: '#ffffff',
-                  boxShadow: mfaFocused ? '0 0 0 3px rgba(37, 99, 235, 0.12)' : 'none',
+                  backgroundColor: 'background.paper',
+                  boxShadow: mfaFocused ? `0 0 0 3px ${alpha(theme.palette.primary.main, 0.16)}` : 'none',
                   transition: 'all 0.2s ease',
                 }}
               >
@@ -472,7 +478,7 @@ export const LoginPage: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#94a3b8',
+                    color: 'text.secondary',
                     mr: 1.5,
                   }}
                 >
@@ -483,7 +489,7 @@ export const LoginPage: React.FC = () => {
                     sx={{
                       fontSize: '0.68rem',
                       fontWeight: 600,
-                      color: '#94a3b8',
+                      color: 'text.secondary',
                       textTransform: 'capitalize',
                       lineHeight: 1,
                     }}
@@ -507,7 +513,7 @@ export const LoginPage: React.FC = () => {
                       fontSize: '1rem',
                       fontWeight: 700,
                       letterSpacing: '0.1em',
-                      color: '#0f172a',
+                      color: 'text.primary',
                       mt: 0.2,
                       p: 0,
                     }}
@@ -522,15 +528,15 @@ export const LoginPage: React.FC = () => {
                 disabled={loading}
                 sx={{
                   py: 1.4,
-                  backgroundColor: '#0066ff',
-                  color: '#ffffff',
+                  backgroundColor: 'primary.main',
+                  color: 'primary.contrastText',
                   fontSize: '0.95rem',
                   fontWeight: 600,
                   borderRadius: '14px',
                   textTransform: 'none',
-                  boxShadow: '0 8px 20px rgba(0, 102, 255, 0.32)',
+                  boxShadow: `0 8px 20px ${alpha(theme.palette.primary.main, 0.28)}`,
                   '&:hover': {
-                    backgroundColor: '#0052cc',
+                    backgroundColor: 'primary.dark',
                   },
                 }}
               >
@@ -548,7 +554,7 @@ export const LoginPage: React.FC = () => {
                   setErrorMsg(null);
                 }}
                 startIcon={<ArrowBackIcon />}
-                sx={{ mt: 2, color: '#64748b', textTransform: 'none', fontSize: '0.85rem' }}
+                sx={{ mt: 2, color: 'text.secondary', textTransform: 'none', fontSize: '0.85rem' }}
               >
                 Back to Password Login
               </Button>
@@ -565,18 +571,18 @@ export const LoginPage: React.FC = () => {
                   my: 3,
                 }}
               >
-                <Box sx={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
+                <Box sx={{ flex: 1, height: '1px', backgroundColor: 'divider' }} />
                 <Typography
                   sx={{
                     px: 2,
                     fontSize: '0.8rem',
-                    color: '#94a3b8',
+                    color: 'text.secondary',
                     fontWeight: 500,
                   }}
                 >
                   Fill Demo Credentials
                 </Typography>
-                <Box sx={{ flex: 1, height: '1px', backgroundColor: '#e2e8f0' }} />
+                <Box sx={{ flex: 1, height: '1px', backgroundColor: 'divider' }} />
               </Box>
 
               {/* 3 Circular Social / SSO Buttons */}
@@ -601,16 +607,17 @@ export const LoginPage: React.FC = () => {
                       width: 44,
                       height: 44,
                       borderRadius: '50%',
-                      border: '1.5px solid #e2e8f0',
-                      backgroundColor: '#ffffff',
+                      border: '1.5px solid',
+                      borderColor: 'divider',
+                      backgroundColor: 'background.paper',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                       '&:hover': {
-                        borderColor: '#cbd5e1',
-                        backgroundColor: '#f8fafc',
+                        borderColor: 'text.secondary',
+                        backgroundColor: 'action.hover',
                         transform: 'translateY(-2px)',
                       },
                     }}
@@ -706,7 +713,7 @@ export const LoginPage: React.FC = () => {
                     textAlign: 'center',
                     fontSize: '0.7rem',
                     fontWeight: 600,
-                    color: '#94a3b8',
+                    color: 'text.secondary',
                     letterSpacing: '0.04em',
                     textTransform: 'uppercase',
                     mb: 1,
@@ -716,11 +723,11 @@ export const LoginPage: React.FC = () => {
                 </Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 0.75, mb: 1.5 }}>
                   {loadingDemoAccounts ? (
-                    <CircularProgress size={18} sx={{ color: '#2563eb', my: 1 }} />
+                    <CircularProgress size={18} sx={{ color: 'primary.main', my: 1 }} />
                   ) : (
                     (primaryAccounts.length > 0 ? primaryAccounts : demoAccounts.slice(0, 5)).map((acc) => {
                       const isSelected = email === acc.email;
-                      const config = getRoleConfig(acc.role);
+                      const config = getRoleConfig(acc.role, theme);
                       return (
                         <Tooltip key={acc.email} title={acc.description} arrow>
                           <Box
@@ -734,16 +741,18 @@ export const LoginPage: React.FC = () => {
                               borderRadius: '9999px',
                               cursor: 'pointer',
                               border: '1px solid',
-                              borderColor: isSelected ? '#2563eb' : '#e2e8f0',
-                              backgroundColor: isSelected ? '#eff6ff' : '#f8fafc',
-                              color: isSelected ? '#1e40af' : '#64748b',
+                              borderColor: isSelected ? 'primary.main' : 'divider',
+                              backgroundColor: isSelected
+                                ? alpha(theme.palette.primary.main, 0.12)
+                                : 'background.paper',
+                              color: isSelected ? 'primary.main' : 'text.secondary',
                               fontSize: '0.72rem',
                               fontWeight: 600,
                               transition: 'all 0.15s ease',
                               '&:hover': {
-                                borderColor: '#2563eb',
-                                backgroundColor: '#eff6ff',
-                                color: '#1e40af',
+                                borderColor: 'primary.main',
+                                backgroundColor: alpha(theme.palette.primary.main, 0.12),
+                                color: 'primary.main',
                               },
                             }}
                           >
@@ -770,15 +779,15 @@ export const LoginPage: React.FC = () => {
                         fontSize: '0.74rem',
                         fontWeight: 600,
                         textTransform: 'none',
-                        color: '#2563eb',
-                        borderColor: '#bfdbfe',
-                        backgroundColor: '#f0f7ff',
+                        color: 'primary.main',
+                        borderColor: 'primary.light',
+                        backgroundColor: alpha(theme.palette.primary.main, 0.06),
                         borderRadius: '9999px',
                         px: 1.75,
                         py: 0.35,
                         '&:hover': {
-                          borderColor: '#2563eb',
-                          backgroundColor: '#e0f2fe',
+                          borderColor: 'primary.main',
+                          backgroundColor: alpha(theme.palette.primary.main, 0.12),
                         },
                       }}
                     >
@@ -796,7 +805,7 @@ export const LoginPage: React.FC = () => {
           <Typography
             sx={{
               fontSize: '0.75rem',
-              color: '#94a3b8',
+              color: 'text.secondary',
               lineHeight: 1.6,
               maxWidth: 420,
               mx: 'auto',

@@ -83,7 +83,8 @@ export const EmployeeLoginDialog: React.FC<EmployeeLoginDialogProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #e2e8f0',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
           py: 2,
           px: 3,
         }}
@@ -94,8 +95,8 @@ export const EmployeeLoginDialog: React.FC<EmployeeLoginDialogProps> = ({
               width: 36,
               height: 36,
               borderRadius: '8px',
-              backgroundColor: '#eff6ff',
-              color: '#2563eb',
+              backgroundColor: 'action.hover',
+              color: 'primary.main',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -104,10 +105,10 @@ export const EmployeeLoginDialog: React.FC<EmployeeLoginDialogProps> = ({
             <PeopleAltOutlinedIcon fontSize="small" />
           </Box>
           <Box>
-            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: '#0f172a' }}>
+            <Typography sx={{ fontWeight: 700, fontSize: '1.05rem', color: 'text.primary' }}>
               Employee Directory Logins
             </Typography>
-            <Typography sx={{ fontSize: '0.75rem', color: '#64748b' }}>
+            <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
               Select any of the {employees.length} company employees to test their individual login
             </Typography>
           </Box>
@@ -125,7 +126,7 @@ export const EmployeeLoginDialog: React.FC<EmployeeLoginDialogProps> = ({
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ color: '#94a3b8', fontSize: 20 }} />
+                  <SearchIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
                 </InputAdornment>
               ),
               sx: { borderRadius: '10px', fontSize: '0.875rem' },
@@ -146,7 +147,7 @@ export const EmployeeLoginDialog: React.FC<EmployeeLoginDialogProps> = ({
         >
           {filteredEmployees.length === 0 ? (
             <Box sx={{ py: 4, textAlign: 'center' }}>
-              <Typography sx={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
                 No employees matching &quot;{searchTerm}&quot;
               </Typography>
             </Box>
@@ -159,15 +160,16 @@ export const EmployeeLoginDialog: React.FC<EmployeeLoginDialogProps> = ({
                   onClose();
                 }}
                 sx={{
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid',
+                  borderColor: 'divider',
                   borderRadius: '12px',
                   p: 1.25,
                   px: 2,
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
                   '&:hover': {
-                    borderColor: '#2563eb',
-                    backgroundColor: '#f8fafc',
+                    borderColor: 'primary.main',
+                    backgroundColor: 'action.hover',
                     transform: 'translateX(3px)',
                   },
                 }}
@@ -179,8 +181,8 @@ export const EmployeeLoginDialog: React.FC<EmployeeLoginDialogProps> = ({
                       height: 36,
                       fontSize: '0.8rem',
                       fontWeight: 700,
-                      backgroundColor: '#2563eb',
-                      color: '#ffffff',
+                      backgroundColor: 'primary.main',
+                      color: 'primary.contrastText',
                     }}
                   >
                     {getInitials(emp.label)}
@@ -189,7 +191,7 @@ export const EmployeeLoginDialog: React.FC<EmployeeLoginDialogProps> = ({
                 <ListItemText
                   primary={
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: '#0f172a' }}>
+                      <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', color: 'text.primary' }}>
                         {emp.label}
                       </Typography>
                       <Chip
@@ -202,10 +204,10 @@ export const EmployeeLoginDialog: React.FC<EmployeeLoginDialogProps> = ({
                   }
                   secondary={
                     <Box sx={{ display: 'flex', flexDirection: 'column', mt: 0.25 }}>
-                      <Typography sx={{ fontSize: '0.75rem', color: '#64748b' }}>
+                      <Typography sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
                         {emp.roleDisplay} • {emp.departmentName || 'Staff'}
                       </Typography>
-                      <Typography sx={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>
+                      <Typography sx={{ fontSize: '0.7rem', color: 'text.secondary', fontFamily: 'monospace' }}>
                         {emp.email} • Pass: {emp.defaultPassword}
                       </Typography>
                     </Box>
@@ -217,7 +219,7 @@ export const EmployeeLoginDialog: React.FC<EmployeeLoginDialogProps> = ({
         </List>
       </DialogContent>
 
-      <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #e2e8f0' }}>
+      <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid', borderColor: 'divider' }}>
         <Button
           onClick={onClose}
           variant="outlined"

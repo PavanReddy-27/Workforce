@@ -3,17 +3,22 @@ import { Box, Typography, Button, Paper } from '@mui/material';
 import GppBadOutlinedIcon from '@mui/icons-material/GppBadOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import { useAuth } from '../../context';
+import { ThemeModeToggleButton } from '../../components/ThemeModeToggleButton';
 
 interface AccessDeniedPageProps {
   requiredRole?: string;
   requiredPermission?: string;
   onGoHome?: () => void;
+  mode?: 'light' | 'dark';
+  onToggleMode?: () => void;
 }
 
 export const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({
   requiredRole,
   requiredPermission,
   onGoHome,
+  mode,
+  onToggleMode,
 }) => {
   const { user } = useAuth();
 
@@ -27,6 +32,11 @@ export const AccessDeniedPage: React.FC<AccessDeniedPageProps> = ({
         p: 3,
       }}
     >
+      {mode && onToggleMode && (
+        <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 1 }}>
+          <ThemeModeToggleButton mode={mode} onToggle={onToggleMode} />
+        </Box>
+      )}
       <Paper
         elevation={0}
         sx={{

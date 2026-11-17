@@ -1,7 +1,10 @@
 import React from 'react';
-import { Box, Typography } from '@mui/material';
+import { alpha, Box, Typography, useTheme } from '@mui/material';
 
 export const Vault3DIllustration: React.FC = () => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
   return (
     <Box
       sx={{
@@ -14,7 +17,9 @@ export const Vault3DIllustration: React.FC = () => {
         justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
-        background: 'linear-gradient(150deg, #e0f2fe 0%, #bae6fd 40%, #93c5fd 85%, #bfdbfe 100%)',
+        background: isDark
+          ? 'linear-gradient(150deg, #0F172A 0%, #172554 45%, #1E3A8A 100%)'
+          : 'linear-gradient(150deg, #e0f2fe 0%, #bae6fd 40%, #93c5fd 85%, #bfdbfe 100%)',
         p: { xs: 4, md: 6 },
       }}
     >
@@ -291,9 +296,9 @@ export const Vault3DIllustration: React.FC = () => {
             position: 'absolute',
             top: -10,
             right: { xs: -10, sm: -20 },
-            backgroundColor: 'rgba(255, 255, 255, 0.85)',
+            backgroundColor: alpha(theme.palette.background.paper, 0.88),
             backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.95)',
+            border: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
             boxShadow: '0 8px 24px rgba(37, 99, 235, 0.16)',
             borderRadius: '9999px',
             px: 2,
@@ -317,7 +322,7 @@ export const Vault3DIllustration: React.FC = () => {
               boxShadow: '0 0 8px #10b981',
             }}
           />
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a8a', letterSpacing: '-0.01em' }}>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: 'text.primary', letterSpacing: '-0.01em' }}>
             256-Bit JWT Encryption
           </Typography>
         </Box>
@@ -327,9 +332,9 @@ export const Vault3DIllustration: React.FC = () => {
             position: 'absolute',
             bottom: 30,
             left: { xs: -10, sm: -24 },
-            backgroundColor: 'rgba(255, 255, 255, 0.88)',
+            backgroundColor: alpha(theme.palette.background.paper, 0.88),
             backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.95)',
+            border: `1px solid ${alpha(theme.palette.text.primary, 0.08)}`,
             boxShadow: '0 8px 24px rgba(37, 99, 235, 0.16)',
             borderRadius: '9999px',
             px: 2,
@@ -345,7 +350,7 @@ export const Vault3DIllustration: React.FC = () => {
           }}
         >
           <Typography sx={{ fontSize: '0.85rem' }}>🛡️</Typography>
-          <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: '#1e3a8a', letterSpacing: '-0.01em' }}>
+          <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, color: 'text.primary', letterSpacing: '-0.01em' }}>
             Zero-Trust RBAC Guard
           </Typography>
         </Box>
@@ -357,7 +362,7 @@ export const Vault3DIllustration: React.FC = () => {
           sx={{
             fontSize: '1.05rem',
             fontWeight: 700,
-            color: '#0f274a',
+            color: 'text.primary',
             letterSpacing: '-0.02em',
           }}
         >
@@ -366,7 +371,7 @@ export const Vault3DIllustration: React.FC = () => {
         <Typography
           sx={{
             fontSize: '0.82rem',
-            color: '#33537a',
+            color: 'text.secondary',
             mt: 0.5,
             lineHeight: 1.5,
           }}
